@@ -70,7 +70,7 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; lett
 .sync[data-s="ok"] i { background: var(--accent); }
 .sync[data-s="busy"] i { background: var(--warn); }
 
-.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--line); padding: 4px; border-radius: 16px; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: var(--line); padding: 4px; border-radius: 16px; }
 .seg button {
   font: inherit; border: 0; border-radius: 12px; padding: 9px 8px; background: transparent; color: var(--ink);
   display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer;
@@ -159,6 +159,10 @@ details.rec[open] summary::after { content: "−"; }
 .recbody { padding: 0 0 14px; display: flex; flex-direction: column; gap: 10px; font-size: 0.94rem; }
 .recbody ul, .recbody ol { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
 .recbody .meta { color: var(--muted); font-size: 0.84rem; }
+.recbody .portions { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.recbody .portions b { min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; font-size: 1.1rem; }
+.recbody h3 { margin: 4px 0 0; font-size: 0.8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.recbody .keep { background: var(--soft); border-radius: 10px; padding: 8px 10px; font-size: 0.88rem; }
 .foot { font-size: 0.8rem; color: var(--muted); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .bar i, .box { transition: none; } }
 </style>
@@ -173,7 +177,7 @@ details.rec[open] summary::after { content: "−"; }
 
   <section class="card" id="setup" aria-label="Einstellungen für diesen Kochtag"></section>
 
-  <section class="card" aria-labelledby="listTitle">
+  <section class="card" id="listCard" aria-labelledby="listTitle">
     <div class="listhead">
       <h2 id="listTitle">Einkaufsliste</h2>
       <span class="prog" id="prog"></span>
@@ -247,25 +251,33 @@ details.rec[open] summary::after { content: "−"; }
       ing: [["rind", 500], ["kidney", 1], ["erbsen", 200], ["kartoffeln", 600, "gewürfelt"], ["tomdose", 1], ["tmark", 2], ["paprika", 1], ["zwiebel", 1], ["knoblauch", 2], ["oel", 1]],
       sp: [["Chili"], ["Kreuzkümmel"], ["Paprikapulver"], ["Oregano"], ["Salz"], ["Pfeffer"]],
       extra: "Optional ein Stück dunkle Schokolade",
-      steps: ["Zwiebel und Knoblauch im Öl anbraten, Fleisch dazu und krümelig braten.", "Gewürze und Tomatenmark 1 Minute mitrösten.", "Tomaten, Kartoffeln, Paprika und etwas Wasser dazu (200 ml bei 4 Portionen), 25 Minuten köcheln.", "Bohnen und Erbsen für die letzten 5 Minuten unterrühren, abschmecken."]
+      kh: 48, fett: 23, bal: 12,
+      lager: "Kühlschrank bis 4 Tage, eingefroren bis 3 Monate. Aufwärmen in der Mikrowelle 3 bis 4 Minuten mit Deckel, nach der Hälfte umrühren.",
+      steps: ["Zwiebel und Paprika würfeln, Knoblauch fein hacken. Kartoffeln schälen und in etwa 1 cm große Würfel schneiden. Bohnen im Sieb abspülen.", "Öl im großen Topf bei mittlerer bis hoher Hitze erhitzen, Zwiebel 3 Minuten glasig braten, Knoblauch kurz mitbraten.", "Faschiertes dazu, mit dem Kochlöffel zerdrücken und 5 bis 7 Minuten krümelig braun braten.", "Gewürze und Tomatenmark dazu und 1 Minute unter Rühren mitrösten.", "Tomaten, Kartoffeln, Paprika und {ml:200} Wasser dazu, aufkochen, dann zugedeckt bei kleiner Hitze 25 Minuten köcheln, bis die Kartoffeln weich sind. Ab und zu umrühren.", "Bohnen und Erbsen für die letzten 5 Minuten unterrühren, nach Wunsch die Schokolade darin schmelzen, mit Salz und Chili abschmecken."]
     },
     curry: {
       short: "Curry", name: "Hühner-Linsen-Curry", sub: "mit Spinat und Basmati", base: 4, kcal: 570, prot: 42, min: 35, keep: "einfrierbar",
       ing: [["huhn", 400, "gewürfelt"], ["linsen", 200], ["kokos", 1], ["tomdose", 1], ["spinat", 300], ["zwiebel", 1], ["knoblauch", 2], ["ingwer", 20], ["oel", 1], ["basmati", 160]],
       sp: [["Currypulver", 2, "EL"], ["Kurkuma", 1, "TL"], ["Salz"]],
-      steps: ["Zwiebel, Knoblauch und Ingwer anbraten, Huhn dazu und rundum anbraten.", "Gewürze kurz mitrösten, dann Linsen, Tomaten, Kokosmilch und Wasser dazu (300 ml bei 4 Portionen).", "20 Minuten köcheln, bis die Linsen weich sind. Spinat am Ende unterrühren.", "Reis daneben kochen und auf die Boxen verteilen."]
+      kh: 65, fett: 13, bal: 10,
+      lager: "Kühlschrank 3 bis 4 Tage, einfrierbar. Beim Aufwärmen 1 bis 2 EL Wasser dazu, der Reis muss dampfend heiß werden.",
+      steps: ["Zwiebel würfeln, Knoblauch und Ingwer fein hacken oder reiben, Huhn in etwa 2 cm große Würfel schneiden. Linsen im Sieb abspülen.", "Reis im kleinen Topf mit der 1,5-fachen Menge Wasser und etwas Salz aufkochen, zugedeckt bei kleinster Hitze 12 Minuten quellen lassen, dann vom Herd nehmen.", "Öl im großen Topf erhitzen, Zwiebel, Knoblauch und Ingwer 3 Minuten anbraten. Huhn dazu und 4 bis 5 Minuten rundum anbraten.", "Currypulver und Kurkuma 30 Sekunden mitrösten.", "Linsen, Tomaten, Kokosmilch und {ml:300} Wasser dazu, aufkochen und bei kleiner Hitze 20 Minuten köcheln, bis die Linsen zerfallen. Öfter umrühren, Linsen setzen sich gern an.", "TK-Spinat unterrühren, 3 Minuten mitziehen lassen, salzen.", "Curry und Reis auf die Boxen verteilen."]
     },
     teri: {
       short: "Teriyaki", name: "Hähnchen-Teriyaki", sub: "mit Brokkoli und Vollkornreis", base: 4, kcal: 560, prot: 47, min: 35, keep: "hält 3 bis 4 Tage, vor der Bolognese essen",
       ing: [["huhn", 600, "in Streifen"], ["brokkoli", 800], ["vkreis", 280], ["soja", 4], ["honig", 1], ["knoblauch", 2], ["ingwer", 20], ["oel", 2], ["sesam", 10]],
       sp: [["Salz"], ["Pfeffer"]],
-      steps: ["Reis im kleinen Topf aufsetzen, er braucht etwa 30 Minuten.", "Sojasauce, Honig, geriebenen Ingwer, fein gehackten Knoblauch und 4 EL Wasser verrühren.", "Brokkoli in Röschen im großen Topf in Salzwasser 3 Minuten kochen und abgießen.", "Hähnchen in der großen Pfanne im Öl 5 bis 6 Minuten scharf anbraten. Sauce dazu und 2 Minuten einkochen, bis sie glänzt.", "Brokkoli unterheben, Sesam drüber, mit dem Reis auf die Boxen verteilen."]
+      kh: 62, fett: 11, bal: 9,
+      lager: "Kühlschrank 3 bis 4 Tage, nicht einfrieren (der Brokkoli wird weich). Vor der Bolognese essen. Mit 1 EL Wasser aufwärmen.",
+      steps: ["Vollkornreis im kleinen Topf mit der doppelten Menge Wasser und etwas Salz aufkochen, zugedeckt bei kleiner Hitze etwa 30 Minuten garen.", "Sauce: Sojasauce, Honig, geriebenen Ingwer, fein gehackten Knoblauch und {ml:60} Wasser verrühren.", "Brokkoli in Röschen teilen, im großen Topf in kochendem Salzwasser 3 Minuten garen und abgießen. So bleibt er bissfest und wird beim Aufwärmen nicht matschig.", "Hähnchen in Streifen schneiden. Öl in der großen Pfanne stark erhitzen, Hähnchen 5 bis 6 Minuten anbraten, bis es innen nicht mehr rosa ist. Bei vielen Portionen in zwei Runden braten.", "Sauce dazu und 2 Minuten einkochen, bis sie glänzt und am Fleisch hängt.", "Brokkoli unterheben, Sesam drüber, mit dem Reis auf die Boxen verteilen."]
     },
     bolo: {
       short: "Bolognese", name: "Puten-Bolognese", sub: "mit Linsen und Vollkornspaghetti", base: 4, kcal: 630, prot: 40, min: 35, keep: "einfrierbar",
       ing: [["pute", 400], ["linsen", 100], ["karotten", 1], ["zucchini", 1], ["zwiebel", 1], ["passiert", 700], ["oel", 1], ["spaghetti", 320]],
       sp: [["Oregano"], ["Salz"], ["Pfeffer"]],
-      steps: ["Gemüse klein würfeln und im Öl anbraten.", "Fleisch dazu und krümelig braten.", "Linsen, Tomaten und Wasser dazu (200 ml bei 4 Portionen), 20 Minuten köcheln.", "Nudeln bissfest kochen, mit der Sauce mischen und aufteilen."]
+      kh: 77, fett: 13, bal: 13,
+      lager: "Kühlschrank bis 4 Tage, eingefroren bis 3 Monate. Mit etwas Wasser aufwärmen, die Nudeln ziehen nach.",
+      steps: ["Zwiebel, Karotte und Zucchini sehr klein würfeln, dann merkt man das Gemüse kaum. Linsen im Sieb abspülen.", "Öl im großen Topf erhitzen, Gemüse 5 Minuten anbraten.", "Putenfaschiertes dazu und 5 Minuten krümelig braten.", "Linsen, passierte Tomaten und {ml:200} Wasser dazu, mit Oregano, Salz und Pfeffer würzen und 20 Minuten bei kleiner Hitze köcheln. Öfter umrühren.", "In der Zeit die Spaghetti in viel Salzwasser 1 Minute kürzer als auf der Packung kochen und abgießen.", "Nudeln mit der Sauce mischen und auf die Boxen verteilen."]
     }
   };
   const DISH_ORDER = ["chili", "curry", "teri", "bolo"];
@@ -291,15 +303,24 @@ details.rec[open] summary::after { content: "−"; }
   ];
 
   const OATS = {
-    name: "Overnight Oats", sub: "mit Skyr und Beeren", kcal: 620, prot: 36,
+    name: "Overnight Oats", sub: "mit Skyr und Beeren", kcal: 620, prot: 36, kh: 63, fett: 21, bal: 15,
     ing: [["hafer", 70], ["skyr", 150], ["milch", 150], ["chia", 10], ["beeren", 100], ["walnuss", 15]],
-    steps: ["Abends Haferflocken, Chia, Skyr und Milch in einem Glas verrühren, Beeren drauf.", "Über Nacht in den Kühlschrank, morgens Walnüsse drüber."]
+    lager: "Hält im Kühlschrank 2 Tage, du kannst also zwei Gläser auf einmal machen.",
+    steps: ["Abends Haferflocken, Chia, Skyr und Milch in einem Schraubglas gut verrühren.", "Gefrorene Beeren obendrauf, sie tauen über Nacht auf.", "Deckel drauf und über Nacht in den Kühlschrank. Morgens Walnüsse drüber."]
   };
   const SNACK = {
-    name: "Snacks", sub: "Apfel, Nüsse, Hummusbrot", kcal: 550, prot: 15,
+    name: "Snacks", sub: "Apfel, Nüsse, Hummusbrot", kcal: 550, prot: 15, kh: 60, fett: 24, bal: 17,
     ing: [["aepfel", 1], ["nuesse", 30], ["brot", 2], ["hummus", 30], ["karotten", 1]],
-    steps: []
+    lager: "Täglich frisch einpacken, Hummus offen im Kühlschrank etwa 5 Tage.",
+    steps: ["Morgens Apfel waschen, Karotte schälen und in Sticks schneiden.", "Nüsse abwiegen und in eine kleine Dose geben.", "Brot mit Hummus bestreichen oder den Hummus in einer kleinen Dose zum Dippen mitnehmen."]
   };
+  const ABLAUF = [
+    "Alles bereitstellen: Zutaten abwiegen, Gemüse schneiden, Boxen hinstellen.",
+    "Was am längsten braucht, zuerst: Vollkornreis (30 Minuten) und Chili (40 Minuten).",
+    "Während etwas köchelt, das zweite Gericht machen und zwischendurch abwaschen.",
+    "Abkühlen lassen und spätestens nach etwa 1 Stunde portioniert in den Kühlschrank, vor allem Reis.",
+    "Boxen, die du erst ab dem 4. Tag isst, einfrieren und am Vorabend zum Auftauen in den Kühlschrank stellen."
+  ];
 
   const DEFAULT = {
     v: 1,
@@ -339,7 +360,9 @@ details.rec[open] summary::after { content: "−"; }
   }
 
   let state = normalize(safeParse(lsGet(LS_STATE)) || window.MP_START || null);
-  let tab = lsGet(LS_TAB) === "1" ? 1 : 0;
+  const savedTab = lsGet(LS_TAB);
+  let tab = savedTab === "1" ? 1 : savedTab === "2" ? 2 : 0;
+  const BOOK = 2, rp = {};
   function safeParse(t) { try { return t ? JSON.parse(t) : null; } catch (e) { return null; } }
 
   // ---------- Rechnen ----------
@@ -417,7 +440,8 @@ details.rec[open] summary::after { content: "−"; }
   function renderSeg() {
     $("seg").innerHTML = state.cook.map((c, i) =>
       '<button type="button" data-tab="' + i + '" aria-pressed="' + (i === tab) + '">' +
-      "<small>Einkauf " + (i + 1) + "</small><b>" + WD[c.wd] + "</b></button>").join("");
+      "<small>Einkauf " + (i + 1) + "</small><b>" + WD[c.wd] + "</b></button>").join("") +
+      '<button type="button" data-tab="' + BOOK + '" aria-pressed="' + (tab === BOOK) + '"><small>Kochen</small><b>Rezepte</b></button>';
   }
 
   function renderSetup() {
@@ -559,7 +583,46 @@ details.rec[open] summary::after { content: "−"; }
     return fmtCook(it.u, q) + " " + name + (note ? ", " + note : "");
   }
 
+  function fill(s, f) { return s.replace(/\{ml:(\d+)\}/g, (m, v) => Math.max(10, Math.round(v * f / 10) * 10) + " ml"); }
+  function nutri(d) { return "Je Portion etwa " + d.kcal + " kcal, " + d.prot + " g Protein, " + d.kh + " g Kohlenhydrate, " + d.fett + " g Fett, " + d.bal + " g Ballaststoffe"; }
+  function planned(k) { return state.cook.map(c => [c, portionsFor(c)[k]]).filter(x => x[1]).map(x => WD[x[0].wd] + " " + x[1]); }
+  function defaultPortions(k) { for (const c of state.cook) { const n = portionsFor(c)[k]; if (n) return n; } return DISHES[k].base; }
+  function steps(list, f) { return list.length ? "<h3>Zubereitung</h3><ol>" + list.map(s => "<li>" + esc(fill(s, f)) + "</li>").join("") + "</ol>" : ""; }
+
+  function renderBook() {
+    const box = $("recipes");
+    const shown = box.dataset.book === "1";
+    const open = new Set([...box.querySelectorAll("details[open]")].map(x => x.dataset.k));
+    const isOpen = (k, dflt) => shown ? open.has(k) : dflt;
+    const plan = state.cook.map(c => { const p = portionsFor(c); const ks = DISH_ORDER.filter(k => p[k]); return ks.length ? WD[c.wd] + ": " + ks.map(k => DISHES[k].short + " " + p[k]).join(", ") : ""; }).filter(Boolean);
+    let html = '<details class="rec" data-k="ablauf"' + (isOpen("ablauf", true) ? " open" : "") + '><summary><b>So läuft der Kochtag</b><span>Ablauf</span></summary><div class="recbody">' +
+      (plan.length ? '<div class="meta">Geplant: ' + esc(plan.join(" · ")) + " Portionen</div>" : "") +
+      "<ol>" + ABLAUF.map(s => "<li>" + esc(s) + "</li>").join("") + "</ol></div></details>";
+    for (const k of DISH_ORDER) {
+      const d = DISHES[k], pl = planned(k), n = rp[k] || defaultPortions(k), f = n / d.base;
+      const ings = d.ing.map(([id, q, note]) => "<li>" + esc(ingLine(id, q * f, note)) + "</li>");
+      const sp = d.sp.map(([name, q, u]) => q ? frac(q * f) + " " + u + " " + name : name);
+      ings.push("<li>" + esc(sp.join(", ")) + (d.sp.some(s => !s[1]) ? " nach Geschmack" : "") + "</li>");
+      if (d.extra) ings.push("<li>" + esc(d.extra) + "</li>");
+      html += '<details class="rec" data-k="' + k + '"' + (isOpen(k, pl.length > 0) ? " open" : "") + '><summary><b>' + esc(d.name) + "</b><span>" + esc(pl.length ? pl.join(", ") : "nicht geplant") + "</span></summary>" +
+        '<div class="recbody"><div class="meta">' + esc(d.sub) + " · " + d.min + " Minuten</div>" +
+        '<div class="portions">Portionen <button type="button" class="step" data-rp="' + k + '" data-d="-1" aria-label="Eine Portion weniger"' + (n <= 1 ? " disabled" : "") + '>−</button><b>' + n + '</b><button type="button" class="step" data-rp="' + k + '" data-d="1" aria-label="Eine Portion mehr"' + (n >= 24 ? " disabled" : "") + ">+</button></div>" +
+        "<h3>Zutaten</h3><ul>" + ings.join("") + "</ul>" + steps(d.steps, f) +
+        '<div class="keep">' + esc(d.lager) + '</div><div class="meta">' + nutri(d) + "</div></div></details>";
+    }
+    [["oats", OATS, "1 Glas"], ["snack", SNACK, "pro Tag"]].forEach(([k, d, unit]) => {
+      html += '<details class="rec" data-k="' + k + '"' + (isOpen(k, false) ? " open" : "") + '><summary><b>' + esc(d.name) + "</b><span>" + unit + "</span></summary>" +
+        '<div class="recbody"><div class="meta">' + esc(d.sub) + "</div>" +
+        "<h3>Zutaten</h3><ul>" + d.ing.map(([id, q]) => "<li>" + esc(ingLine(id, q)) + "</li>").join("") + "</ul>" + steps(d.steps, 1) +
+        '<div class="keep">' + esc(d.lager) + '</div><div class="meta">' + nutri(d) + "</div></div></details>";
+    });
+    box.innerHTML = html;
+    box.dataset.book = "1";
+  }
+
   function renderRecipes() {
+    if (tab === BOOK) { renderBook(); return; }
+    $("recipes").dataset.book = "";
     const c = state.cook[tab];
     const p = portionsFor(c);
     let html = "";
@@ -572,7 +635,7 @@ details.rec[open] summary::after { content: "−"; }
       if (d.extra) ings.push("<li>" + esc(d.extra) + "</li>");
       html += '<details class="rec"><summary><b>' + d.name + "</b><span>" + n + (n === 1 ? " Portion" : " Portionen") + "</span></summary>" +
         '<div class="recbody"><div class="meta">' + d.sub + " · " + d.min + " Minuten · " + d.keep + " · je Portion etwa " + d.kcal + " kcal, " + d.prot + " g Protein</div>" +
-        "<ul>" + ings.join("") + "</ul><ol>" + d.steps.map(s => "<li>" + esc(s) + "</li>").join("") + "</ol></div></details>";
+        "<ul>" + ings.join("") + "</ul><ol>" + d.steps.map(s => "<li>" + esc(fill(s, f)) + "</li>").join("") + "</ol></div></details>";
     }
     if (c.days && c.fr) {
       html += '<details class="rec"><summary><b>' + OATS.name + "</b><span>1 Glas pro Tag</span></summary>" +
@@ -589,7 +652,12 @@ details.rec[open] summary::after { content: "−"; }
   }
 
   function renderAll() {
-    renderSeg(); renderSetup(); renderList(); renderRecipes();
+    renderSeg();
+    const book = tab === BOOK;
+    $("setup").hidden = book; $("listCard").hidden = book;
+    $("recTitle").textContent = book ? "Rezepte" : "Rezepte mit diesen Mengen";
+    if (!book) { renderSetup(); renderList(); }
+    renderRecipes();
   }
 
   // ---------- Speichern und Sync ----------
@@ -668,6 +736,13 @@ details.rec[open] summary::after { content: "−"; }
       tab = Number(t.dataset.tab); lsSet(LS_TAB, String(tab)); renderAll();
       return;
     }
+    if (t.dataset.rp) {
+      const k = t.dataset.rp;
+      rp[k] = Math.min(24, Math.max(1, (rp[k] || defaultPortions(k)) + Number(t.dataset.d)));
+      renderBook();
+      return;
+    }
+    if (tab === BOOK) return;
     const c = state.cook[tab];
     if (t.id === "minus" && c.days > 0) { c.days--; changed(); renderAll(); return; }
     if (t.id === "plus" && c.days < 10) { c.days++; changed(); renderAll(); return; }
