@@ -1,0 +1,28 @@
+{
+ "name": "Meal Prep Einkauf",
+ "short_name": "Meal Prep",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f1f4ef",
+ "theme_color": "#f1f4ef",
+ "lang": "de",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
