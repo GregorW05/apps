@@ -140,6 +140,7 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
         <select id="filter" aria-label="Thema"></select>
         <select id="modus" aria-label="Modus">
           <option value="heute" data-t="Heute fällig und neu">Heute fällig und neu</option>
+          <option value="neu" data-t="Nur neue Karten">Nur neue Karten</option>
           <option value="alle" data-t="Alle Karten üben">Alle Karten üben</option>
         </select>
       </div>
@@ -174,6 +175,7 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
   // Englische Oberfläche für Kurse mit "lang": "en" (HSG-Interview), Schlüssel ist der deutsche Text
   const EN = {
     "fällig": "due", "neu": "new", "sicher": "mastered", "Heute fällig und neu": "Due today and new", "Alle Karten üben": "Practise all cards",
+    "Nur neue Karten": "New cards only", "Keine neuen Karten mehr": "No new cards left", "Alle Karten in diesem Filter hast du schon gesehen.": "You have already seen every card in this filter.",
     "Lernen": "Study", "Lernblatt": "Summary", "Übersicht": "Progress", "Alle Themen": "All topics",
     "gleich": "now", "1 Tag": "1 day", " Tage": " days", "Nochmal": "Again", "Schwer": "Hard", "Gut": "Good", "Leicht": "Easy",
     "Antwort zeigen": "Show answer", "Ergänzung": "Added by Claude", "Ergänzung von Claude": "Added by Claude", "Ergänzung von Claude, Bezug: ": "Added by Claude, based on: ",
@@ -219,6 +221,7 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
   function baueQueue() {
     const karten = D.karten.filter(passt);
     if ($("modus").value === "alle") { queue = mischen(karten.slice()); }
+    else if ($("modus").value === "neu") { queue = karten.filter(istNeu); } // nur noch nie gesehene Karten, ohne Tageslimit
     else {
       const faellig = karten.filter(istFaellig).sort((a, b) => prog[a.id].d.localeCompare(prog[b.id].d));
       const frei = Math.max(0, neuProTag() - heuteEingefuehrt());
@@ -272,8 +275,9 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
     if (!aktuell) {
       const imFilter = D.karten.filter(passt);
       const offenNeu = imFilter.filter(istNeu).length;
-      el.innerHTML = '<div class="karte leer"><h2>' + T(bewertetInSitzung ? "Für heute geschafft" : "Gerade nichts fällig") + '</h2>' +
-        '<p class="hinweis">' + (offenNeu ? offenNeu + T(" neue Karten warten, das Tageslimit von ") + neuProTag() + T(" ist erreicht.") : T("Alle Karten in diesem Bereich sind eingeplant.")) + '</p>' +
+      const nurNeu = $("modus").value === "neu";
+      el.innerHTML = '<div class="karte leer"><h2>' + T(nurNeu ? "Keine neuen Karten mehr" : bewertetInSitzung ? "Für heute geschafft" : "Gerade nichts fällig") + '</h2>' +
+        '<p class="hinweis">' + (nurNeu ? T("Alle Karten in diesem Filter hast du schon gesehen.") : offenNeu ? offenNeu + T(" neue Karten warten, das Tageslimit von ") + neuProTag() + T(" ist erreicht.") : T("Alle Karten in diesem Bereich sind eingeplant.")) + '</p>' +
         '<button id="weiter" class="zeigen" style="width:auto">' + T("Trotzdem weiter üben") + '</button></div>';
       $("weiter").onclick = () => { $("modus").value = "alle"; baueQueue(); };
       return;
