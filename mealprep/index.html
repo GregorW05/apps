@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Schibsted+Grotesk:wght@600;700;800&display=swap">
 <style>
-/* Layout: eine Spalte pro Kochtag. Regler oben, Einkaufsliste nach Lidl-Bereichen, Rezepte mit umgerechneten Mengen unten. */
+/* Layout: eine Spalte pro Kochtag. Regler oben, Einkaufsliste in der Reihenfolge des Spar-Rundgangs, Rezepte mit umgerechneten Mengen unten. */
 :root {
   --bg: #f1f4ef;
   --surface: #ffffff;
@@ -201,7 +201,16 @@ details.rec[open] summary::after { content: "−"; }
 (function () {
   "use strict";
 
-  const AREAS = ["Obst und Gemüse", "Kühlregal", "Fleisch und Fisch", "Tiefkühl", "Konserven und Trockenes", "Falls nicht daheim"];
+  // Bereiche in der Reihenfolge des Spar-Rundgangs (Wunsch Gregor 09.11.2026). Haken hängen am Artikel, nicht am Bereich.
+  const AREAS = ["Obst und Gemüse", "Fleisch", "Dosen, Gewürze, Öl und Getreide", "Brot", "Kühlregal und Tiefkühl"];
+  // Reihenfolge innerhalb der Bereiche: Dosen, Gewürze, Öl und Saucen, dann Getreide und Nüsse
+  const SHOP_ORDER = ["kartoffeln", "zwiebel", "knoblauch", "ingwer", "paprika", "karotten", "zucchini", "brokkoli", "zitrone", "aepfel",
+    "rind", "huhn", "pute",
+    "kidney", "tomdose", "passiert", "kokos", "tmark", "gewuerze", "oel", "soja", "honig",
+    "linsen", "basmati", "vkreis", "spaghetti", "hafer", "chia", "sesam", "walnuss", "nuesse", "schoko",
+    "brot",
+    "skyr", "milch", "hummus", "erbsen", "spinat", "beeren"];
+  const shopPos = r => { const i = SHOP_ORDER.indexOf(r.key.slice(r.key.indexOf("-") + 1)); return i < 0 ? 999 : i; };
   const WD = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
   // Artikel: n Name auf der Liste, c Name im Rezept (Einzahl), a Bereich, u Einheit, h Zusatzhinweis
@@ -216,33 +225,33 @@ details.rec[open] summary::after { content: "−"; }
     brokkoli: { n: "Brokkoli", a: 0, u: "g", h: q => { const k = Math.max(1, Math.round(q / 400)); return "etwa " + k + (k === 1 ? " Kopf" : " Köpfe"); } },
     zitrone: { n: "Zitrone", a: 0, u: "Stk" },
     aepfel: { n: "Äpfel", c: "Apfel", a: 0, u: "Stk" },
-    skyr: { n: "Skyr natur", a: 1, u: "g" },
-    milch: { n: "Milch 1,5 %", a: 1, u: "ml" },
-    hummus: { n: "Hummus", a: 1, u: "g" },
-    rind: { n: "Rinderfaschiertes", a: 2, u: "g" },
-    huhn: { n: "Hühnerbrust", a: 2, u: "g" },
-    pute: { n: "Putenfaschiertes", a: 2, u: "g" },
-    erbsen: { n: "Erbsen", c: "TK-Erbsen", a: 3, u: "g" },
-    spinat: { n: "Blattspinat", c: "TK-Blattspinat", a: 3, u: "g" },
-    beeren: { n: "Beerenmix", c: "TK-Beeren", a: 3, u: "g" },
-    kidney: { n: "Kidneybohnen", a: 4, u: "Dose" },
-    tomdose: { n: "Gehackte Tomaten", a: 4, u: "Dose" },
-    passiert: { n: "Passierte Tomaten", a: 4, u: "g" },
-    kokos: { n: "Kokosmilch light", a: 4, u: "Dose", h: () => "je 400 ml" },
-    linsen: { n: "Rote Linsen", a: 4, u: "g" },
-    basmati: { n: "Basmatireis", a: 4, u: "g" },
-    vkreis: { n: "Vollkornreis", a: 4, u: "g" },
-    spaghetti: { n: "Vollkornspaghetti", a: 4, u: "g" },
-    soja: { n: "Sojasauce", a: 4, u: "EL", h: () => "1 Flasche reicht lange" },
-    honig: { n: "Honig", a: 4, u: "EL", h: () => "1 Glas reicht lange" },
-    sesam: { n: "Sesam", a: 4, u: "g" },
-    hafer: { n: "Haferflocken", a: 4, u: "g" },
-    chia: { n: "Chia- oder Leinsamen", a: 4, u: "g" },
-    walnuss: { n: "Walnüsse", a: 4, u: "g" },
-    nuesse: { n: "Mandeln oder Nussmix", c: "Nüsse", a: 4, u: "g" },
-    brot: { n: "Vollkornbrot", a: 4, u: "Scheibe" },
-    oel: { n: "Olivenöl", a: 5, u: "EL" },
-    tmark: { n: "Tomatenmark", a: 5, u: "EL" }
+    skyr: { n: "Skyr natur", a: 4, u: "g" },
+    milch: { n: "Milch 1,5 %", a: 4, u: "ml" },
+    hummus: { n: "Hummus", a: 4, u: "g" },
+    rind: { n: "Rinderfaschiertes", a: 1, u: "g" },
+    huhn: { n: "Hühnerbrust", a: 1, u: "g" },
+    pute: { n: "Putenfaschiertes", a: 1, u: "g" },
+    erbsen: { n: "Erbsen", c: "TK-Erbsen", a: 4, u: "g" },
+    spinat: { n: "Blattspinat", c: "TK-Blattspinat", a: 4, u: "g" },
+    beeren: { n: "Beerenmix", c: "TK-Beeren", a: 4, u: "g" },
+    kidney: { n: "Kidneybohnen", a: 2, u: "Dose" },
+    tomdose: { n: "Gehackte Tomaten", a: 2, u: "Dose" },
+    passiert: { n: "Passierte Tomaten", a: 2, u: "g" },
+    kokos: { n: "Kokosmilch light", a: 2, u: "Dose", h: () => "je 400 ml" },
+    linsen: { n: "Rote Linsen", a: 2, u: "g" },
+    basmati: { n: "Basmatireis", a: 2, u: "g" },
+    vkreis: { n: "Vollkornreis", a: 2, u: "g" },
+    spaghetti: { n: "Vollkornspaghetti", a: 2, u: "g" },
+    soja: { n: "Sojasauce", a: 2, u: "EL", h: () => "1 Flasche reicht lange" },
+    honig: { n: "Honig", a: 2, u: "EL", h: () => "1 Glas reicht lange" },
+    sesam: { n: "Sesam", a: 2, u: "g" },
+    hafer: { n: "Haferflocken", a: 2, u: "g" },
+    chia: { n: "Chia- oder Leinsamen", a: 2, u: "g" },
+    walnuss: { n: "Walnüsse", a: 2, u: "g" },
+    nuesse: { n: "Mandeln oder Nussmix", c: "Nüsse", a: 2, u: "g" },
+    brot: { n: "Vollkornbrot", a: 3, u: "Scheibe" },
+    oel: { n: "Olivenöl", a: 2, u: "EL", h: () => "falls nicht daheim" },
+    tmark: { n: "Tomatenmark", a: 2, u: "EL", h: () => "falls nicht daheim" }
   };
   const ITEM_ORDER = Object.keys(ITEMS);
 
@@ -513,10 +522,10 @@ details.rec[open] summary::after { content: "−"; }
       rows.push({ key: tab + "-" + id, area: it.a, name: it.n, qty: fmtShop(it.u, q), hint: it.h ? it.h(q) : "", src: m.src.join(", ") });
     }
     if (spices.length) {
-      rows.push({ key: tab + "-gewuerze", area: 5, name: "Gewürze", qty: "", hint: "", src: spices.join(", ") });
+      rows.push({ key: tab + "-gewuerze", area: 2, name: "Gewürze", qty: "", hint: "was nicht daheim ist", src: spices.join(", ") });
     }
     if (c.dishes.includes("chili") && portionsFor(c).chili) {
-      rows.push({ key: tab + "-schoko", area: 5, name: "Dunkle Schokolade", qty: "optional", hint: "", src: "Chili" });
+      rows.push({ key: tab + "-schoko", area: 2, name: "Dunkle Schokolade", qty: "optional", hint: "", src: "Chili" });
     }
     return rows;
   }
@@ -553,29 +562,29 @@ details.rec[open] summary::after { content: "−"; }
     const rows = currentRows();
     const kit = tab === 0 ? kitRows() : [];
     kitShown = kit.length > 0 && kit.some(r => !state.checked[r.key]);
-    let html = "";
+    let html = "", kitHtml = "";
     if (kitShown) {
       const tips = [];
       if (state.cook.some(c => { const p = portionsFor(c); return p.chili && p.curry; })) tips.push("Chili und Curry nacheinander im großen Topf kochen");
       if (kit.some(r => r.key === "k-topfklein")) tips.push("Reis im kleinen Topf");
       if (state.cook.some(c => { const p = portionsFor(c); return p.teri && p.bolo; })) tips.push("Am zweiten Kochtag zuerst Brokkoli und Spaghetti im großen Topf, dann Teriyaki und Bolognese-Sauce nacheinander in der großen Pfanne");
       else if (state.cook.some(c => portionsFor(c).bolo)) tips.push("Bolognese-Sauce in der großen Pfanne, Spaghetti im großen Topf");
-      html += '<div class="area kit"><div class="label">Küche, einmalig</div>' +
+      kitHtml = '<div class="area kit"><div class="label">Küche, einmalig</div>' +
         '<p class="kitnote">Schon da: ' + HAVE + ".</p>" +
         kit.map(rowHtml).join("") +
         '<p class="kitnote">' + (tips.length ? tips.join(", ") + ". " : "") +
-        "Küchenzeug hat der Lidl oft nur in Aktionswochen. Sonst Haushaltsgeschäft oder Ikea.</p></div>";
+        "Küchenzeug hat am ehesten ein Interspar, sonst Haushaltsgeschäft oder Ikea.</p></div>";
     }
     if (!rows.length) {
       html += '<p class="empty">Nichts zu kaufen. Stell oben Tage und Gerichte ein.</p>';
     } else {
       AREAS.forEach((area, ai) => {
-        const rs = rows.filter(r => r.area === ai);
+        const rs = rows.filter(r => r.area === ai).sort((x, y) => shopPos(x) - shopPos(y));
         if (!rs.length) return;
         html += '<div class="area"><div class="label">' + area + "</div>" + rs.map(rowHtml).join("") + "</div>";
       });
     }
-    $("list").innerHTML = html;
+    $("list").innerHTML = html + kitHtml;
     renderProgress();
   }
 
