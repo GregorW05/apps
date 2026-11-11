@@ -146,6 +146,7 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
           <option value="alle" data-t="Alle Karten üben">Alle Karten üben</option>
         </select>
       </div>
+      <p class="hinweis" id="kapitelzahl" style="margin:-4px 2px 0"></p>
       <div id="karte"></div>
       <p class="status" id="status"></p>
     </div>
@@ -181,7 +182,7 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
     "Lernen": "Study", "Lernblatt": "Summary", "Übersicht": "Progress", "Alle Themen": "All topics",
     "gleich": "now", "1 Tag": "1 day", " Tage": " days", "Nochmal": "Again", "Schwer": "Hard", "Gut": "Good", "Leicht": "Easy",
     "Antwort zeigen": "Show answer", "Ergänzung": "Added by Claude", "Ergänzung von Claude": "Added by Claude", "Ergänzung von Claude, Bezug: ": "Added by Claude, based on: ",
-    "Deine Notiz, ": "Your note, ", "noch klären": "to clarify",
+    "Deine Notiz, ": "Your note, ", "noch klären": "to clarify", "Karten": "cards", "gelernt": "studied",
     "Für heute geschafft": "Done for today", "Gerade nichts fällig": "Nothing due right now",
     " neue Karten warten, das Tageslimit von ": " new cards waiting, the daily limit of ", " ist erreicht.": " has been reached.",
     "Alle Karten in diesem Bereich sind eingeplant.": "All cards in this area are scheduled.", "Trotzdem weiter üben": "Keep practising anyway",
@@ -211,8 +212,8 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
   function istFaellig(k) { const p = prog[k.id]; return p && p.d && p.d <= heute(); }
   function istNeu(k) { return !prog[k.id]; }
   function heuteEingefuehrt() { const h = heute(); return D.karten.filter(k => prog[k.id] && prog[k.id].e === h).length; }
-  function passt(k) {
-    const f = $("filter").value;
+  function passt(k) { return passtWert(k, $("filter").value); }
+  function passtWert(k, f) {
     if (f === "alle") return true;
     if (f === "pruef") return !!k.p;
     if (f === "sicher") return !!k.sicher;
@@ -311,6 +312,18 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
     $("z-faellig").textContent = alle.filter(istFaellig).length;
     $("z-neu").textContent = alle.filter(istNeu).length;
     $("z-sicher").textContent = alle.filter(k => prog[k.id] && prog[k.id].b >= 3).length;
+    filterZahlen();
+  }
+  // Kartenzahl je Kapitel: im Auswahlfeld „gelernt/gesamt“, darunter die Zeile zum gewählten Kapitel
+  function filterZahlen() {
+    const sel = $("filter");
+    [...sel.options].forEach(o => {
+      const ks = D.karten.filter(k => passtWert(k, o.value));
+      o.textContent = o.dataset.l + " (" + ks.filter(k => prog[k.id]).length + "/" + ks.length + ")";
+    });
+    const ks = D.karten.filter(passt);
+    const g = ks.filter(k => prog[k.id]).length, s = ks.filter(k => prog[k.id] && prog[k.id].b >= 3).length, f = ks.filter(istFaellig).length;
+    $("kapitelzahl").textContent = ks.length + " " + T("Karten") + " · " + g + " " + T("gelernt") + " · " + s + " " + T("sicher") + (f ? " · " + f + " " + T("fällig") : "");
   }
 
   function zeichneBlatt() {
@@ -332,7 +345,7 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
       const sicher = ks.filter(k => prog[k.id] && prog[k.id].b >= 3).length;
       const lernt = ks.filter(k => prog[k.id] && prog[k.id].b < 3).length;
       const f = ks.filter(istFaellig).length;
-      h += '<div class="zeile"><span class="name">' + esc(t.titel) + '</span><span class="werte">' + sicher + '/' + n + ' ' + T("sicher") + (f ? ' · ' + f + ' ' + T("fällig") : '') + '</span>' +
+      h += '<div class="zeile"><span class="name">' + esc(t.titel) + '</span><span class="werte">' + (sicher + lernt) + '/' + n + ' ' + T("gelernt") + ' · ' + sicher + ' ' + T("sicher") + (f ? ' · ' + f + ' ' + T("fällig") : '') + '</span>' +
         '<div class="balken" role="img" aria-label="' + sicher + ' ' + T("sicher") + ', ' + lernt + ' ' + T("in Arbeit") + ' ' + T("von") + ' ' + n + '"><i class="sicher" style="width:' + (100 * sicher / n) + '%"></i><i class="lernt" style="width:' + (100 * lernt / n) + '%"></i></div></div>';
     });
     h += '</div><div class="legende"><span><i style="background:var(--good)"></i>' + T("sicher (ab 4 Tagen Abstand)") + '</span><span><i style="background:var(--accent)"></i>' + T("in Arbeit") + '</span><span><i style="background:var(--line)"></i>' + T("neu") + '</span></div>';
@@ -349,12 +362,14 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
   }
 
   function filterFuellen() {
-    const o = ['<option value="alle">' + T("Alle Themen") + '</option>'];
-    if (D.karten.some(k => k.sicher)) o.push('<option value="sicher">★ Nur 100 % Prüfung</option>');
-    if (D.karten.some(k => k.p)) o.push('<option value="pruef">' + esc(lab().pFilter || "★ Nur Prüfungsstoff") + '</option>');
-    if (D.karten.some(k => k.typ === "fall")) o.push('<option value="fall">' + esc(lab().fallFilter || "Nur Fallbeispiele") + '</option>');
-    D.themen.filter(t => D.karten.some(k => k.t === t.id)).forEach(t => o.push('<option value="' + t.id + '">' + esc(t.titel) + '</option>'));
+    const opt = (v, l) => '<option value="' + esc(v) + '" data-l="' + esc(l) + '">' + esc(l) + '</option>';
+    const o = [opt("alle", T("Alle Themen"))];
+    if (D.karten.some(k => k.sicher)) o.push(opt("sicher", "★ Nur 100 % Prüfung"));
+    if (D.karten.some(k => k.p)) o.push(opt("pruef", lab().pFilter || "★ Nur Prüfungsstoff"));
+    if (D.karten.some(k => k.typ === "fall")) o.push(opt("fall", lab().fallFilter || "Nur Fallbeispiele"));
+    D.themen.filter(t => D.karten.some(k => k.t === t.id)).forEach(t => o.push(opt(t.id, t.titel)));
     $("filter").innerHTML = o.join("");
+    filterZahlen();
   }
   function ansicht(v) {
     document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.v === v) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
