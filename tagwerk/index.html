@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1419" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tagwerk">
+<meta name="robots" content="noindex">
+<meta name="description" content="Zeitung, Lernkartei und Meal Prep in einer App">
+<title>Tagwerk</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<style>
+/* Tagwerk: ruhige Papierfläche, Daumenleiste unten, jeder Bereich mit eigener Akzentfarbe (Zeitung rot, Lernen gold, Essen grün) */
+:root {
+  --bg: #f4f1ea; --surface: #ffffff; --surface-2: #ece7dc; --ink: #17202a; --muted: #5b6570; --line: #e0d9cb;
+  --sun: #e8a93b; --brand: #15212c; --focus: #1d5fd1;
+  --zeitung: #b3343a; --zeitung-soft: #f6e3e4;
+  --lernen: #8f6310; --lernen-soft: #f6ead0;
+  --essen: #2b6a4c; --essen-soft: #e1ede5;
+  --leiste: 58px;
+  --f-text: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  --f-zeitung: "Iowan Old Style", "Source Serif 4", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1419; --surface: #18202a; --surface-2: #202a35; --ink: #e7ebef; --muted: #9ba6b1; --line: #2b3540;
+  --brand: #e7ebef; --focus: #8ab4ff;
+  --zeitung: #f08a86; --zeitung-soft: #3a1f22; --lernen: #e8b04c; --lernen-soft: #3a2f17; --essen: #72c497; --essen-soft: #1d3326;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1419; --surface: #18202a; --surface-2: #202a35; --ink: #e7ebef; --muted: #9ba6b1; --line: #2b3540;
+  --brand: #e7ebef; --focus: #8ab4ff;
+  --zeitung: #f08a86; --zeitung-soft: #3a1f22; --lernen: #e8b04c; --lernen-soft: #3a2f17; --essen: #72c497; --essen-soft: #1d3326;
+  color-scheme: dark }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-text); font-size: 1.0625rem; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.ansicht { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: calc(20px + env(safe-area-inset-top, 0px)) calc(var(--leiste) + 28px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; }
+.rahmen { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px); bottom: calc(var(--leiste) + env(safe-area-inset-bottom, 0px)); }
+.rahmen iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+.laedt { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .95rem; pointer-events: none; }
+
+/* Kopf */
+.eyebrow { margin: 0; font-size: .8rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+.wetter { margin: 6px 0 0; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.wetter b { color: var(--ink); font-weight: 600; }
+
+/* Karten der Startseite */
+.karte { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 16px 14px; border-top: 4px solid var(--akzent); min-width: 0; }
+.karte.zeitung { --akzent: var(--zeitung); --soft: var(--zeitung-soft); }
+.karte.lernen { --akzent: var(--lernen); --soft: var(--lernen-soft); }
+.karte.essen { --akzent: var(--essen); --soft: var(--essen-soft); }
+.karte h2 { margin: 0; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--akzent); display: flex; justify-content: space-between; gap: 8px; }
+.karte h2 span { color: var(--muted); font-weight: 600; letter-spacing: .02em; text-transform: none; font-size: .85rem; }
+.schlagzeilen { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-family: var(--f-zeitung); font-size: 1.12rem; line-height: 1.3; }
+.schlagzeilen li { padding-left: 14px; position: relative; text-wrap: pretty; }
+.schlagzeilen li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--akzent); }
+.gross { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.gross b { font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.gross span { color: var(--muted); }
+.zeile { margin: 0; color: var(--muted); font-size: .95rem; }
+.zeile b { color: var(--ink); font-weight: 600; }
+.balken { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.balken i { display: block; height: 100%; background: var(--akzent); border-radius: 4px; transition: width .3s; }
+.knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 22px; border: 0; background: var(--akzent, var(--brand)); color: var(--surface); font: inherit; font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; justify-self: start; }
+.knopf.leise { background: var(--surface-2); color: var(--ink); }
+.privat { background: var(--soft, var(--surface-2)); border-radius: 12px; padding: 10px 12px; font-size: .95rem; }
+
+/* Einstellungen */
+details.einst { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+details.einst summary { min-height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-weight: 600; list-style: none; }
+details.einst summary::-webkit-details-marker { display: none; }
+details.einst summary::after { content: "+"; font-size: 1.4rem; color: var(--muted); }
+details.einst[open] summary::after { content: "−"; }
+.einst-inhalt { padding: 0 16px 16px; display: grid; gap: 18px; }
+.einst-inhalt h3 { margin: 0 0 4px; font-size: 1rem; }
+.einst-inhalt p { margin: 0 0 8px; color: var(--muted); font-size: .92rem; }
+input[type="text"], textarea, select { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; }
+textarea { min-height: 96px; font-size: .85rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.reihe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.meldung-status { margin: 6px 0 0; font-size: .9rem; color: var(--muted); min-height: 1.3em; }
+.klein { font-size: .85rem; color: var(--muted); text-align: center; margin: 4px 0 0; }
+
+/* Zeitung */
+.zt h1 { font-family: var(--f-zeitung); font-size: 2.1rem; }
+.zt .block { display: grid; gap: 12px; }
+.zt h2.ressort { margin: 10px 0 0; padding-top: 12px; border-top: 2px solid var(--ink); font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.zt article { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.zt article:last-child { border-bottom: 0; }
+.zt article h3 { margin: 0; font-family: var(--f-zeitung); font-size: 1.3rem; line-height: 1.25; text-wrap: balance; }
+.zt article p { margin: 0; max-width: 65ch; }
+.zt .warum { color: var(--zeitung); font-size: .95rem; }
+.zt .quelle { font-size: .9rem; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; justify-self: start; min-height: 44px; display: inline-flex; align-items: center; }
+.persoenlich { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--zeitung); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; }
+.persoenlich h2 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.persoenlich h2 span { background: var(--zeitung); color: var(--surface); border-radius: 10px; font-size: .8rem; padding: 0 8px; }
+.eintrag { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+.eintrag p { margin: 0; font-size: .97rem; }
+.pille { font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; background: var(--surface-2); color: var(--ink); }
+.pille.neu { background: var(--zeitung); color: var(--surface); }
+.pille.termin { background: var(--essen-soft); color: var(--essen); }
+.pille.offen { background: var(--lernen-soft); color: var(--lernen); }
+.fuss { color: var(--muted); font-size: .85rem; margin: 0; }
+
+/* Leiste unten */
+nav.leiste { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+nav.leiste div { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); height: var(--leiste); }
+nav.leiste a { display: grid; justify-items: center; align-content: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: .72rem; font-weight: 600; letter-spacing: .02em; min-height: 44px; position: relative; }
+nav.leiste svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+nav.leiste a[aria-current="page"] { color: var(--ink); }
+nav.leiste a[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--akzent); }
+nav.leiste a[data-v="heute"] { --akzent: var(--sun); } nav.leiste a[data-v="zeitung"] { --akzent: var(--zeitung); }
+nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="essen"] { --akzent: var(--essen); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+@media (min-width: 700px) { h1 { font-size: 2.2rem; } }
+</style>
+</head>
+<body>
+
+<main id="v-heute" class="ansicht" aria-labelledby="h-heute">
+  <header>
+    <p class="eyebrow" id="gruss">Tagwerk</p>
+    <h1 id="h-heute">Heute</h1>
+    <p class="wetter" id="wetter-kurz"></p>
+  </header>
+
+  <section class="karte zeitung" aria-labelledby="k-zeitung">
+    <h2 id="k-zeitung">Zeitung <span id="k-zeitung-nr"></span></h2>
+    <ul class="schlagzeilen" id="k-schlagzeilen"><li>Lädt die Ausgabe</li></ul>
+    <div class="privat" id="k-privat" hidden></div>
+    <a class="knopf" href="#zeitung">Zeitung lesen</a>
+  </section>
+
+  <section class="karte lernen" aria-labelledby="k-lernen">
+    <h2 id="k-lernen">Lernen <span id="k-lernen-bereich"></span></h2>
+    <div class="gross"><b id="k-faellig">–</b><span id="k-faellig-text">Karten fällig</span></div>
+    <p class="zeile" id="k-lernen-zeile"></p>
+    <a class="knopf" href="#lernen">Jetzt lernen</a>
+  </section>
+
+  <section class="karte essen" aria-labelledby="k-essen">
+    <h2 id="k-essen">Essen <span id="k-essen-tage"></span></h2>
+    <div class="gross"><b id="k-kochtag">–</b><span id="k-kochtag-text"></span></div>
+    <div class="balken" aria-hidden="true"><i id="k-balken" style="width:0"></i></div>
+    <p class="zeile" id="k-essen-zeile"></p>
+    <a class="knopf" href="#essen">Zur Einkaufsliste</a>
+  </section>
+
+  <details class="einst" id="einst">
+    <summary>Einstellungen und Übertragen</summary>
+    <div class="einst-inhalt">
+      <div>
+        <h3>Schlüssel für deinen persönlichen Teil</h3>
+        <p>Einmal pro Gerät eingeben. Ohne Schlüssel siehst du nur Meldungen und Wetter.</p>
+        <input type="text" id="schluessel" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH IJKL …" aria-label="Schlüssel">
+        <div class="reihe"><button class="knopf" type="button" id="schluessel-speichern" style="--akzent:var(--brand)">Schlüssel speichern</button><button class="knopf leise" type="button" id="schluessel-weg">Schlüssel entfernen</button></div>
+        <p class="meldung-status" id="schluessel-status" role="status"></p>
+      </div>
+      <div>
+        <h3>Stand übernehmen</h3>
+        <p>Am iPhone hat jede Homescreen-App ihren eigenen Speicher. Kopiere in der alten Lernkartei unter Übersicht „Fortschritt für Claude kopieren“, in Meal Prep ganz unten „Haken für Tagwerk kopieren“, und füge den Text hier ein.</p>
+        <textarea id="import" aria-label="Kopierten Stand einfügen" placeholder="Lernstand Lernkartei … oder Meal Prep Stand …"></textarea>
+        <div class="reihe"><button class="knopf" type="button" id="import-los" style="--akzent:var(--brand)">Stand übernehmen</button></div>
+        <p class="meldung-status" id="import-status" role="status"></p>
+      </div>
+    </div>
+  </details>
+  <p class="klein">Tagwerk · <a href="../">alle Apps</a></p>
+</main>
+
+<main id="v-zeitung" class="ansicht zt" aria-labelledby="h-zeitung" hidden>
+  <header>
+    <p class="eyebrow" id="z-eyebrow">Morgenzeitung</p>
+    <h1 id="h-zeitung">Morgenzeitung</h1>
+    <p class="wetter" id="z-wetter"></p>
+  </header>
+  <section class="persoenlich" id="z-privat" aria-labelledby="z-privat-titel" hidden></section>
+  <div class="block" id="z-inhalt"></div>
+  <label class="eyebrow" for="z-archiv">Ältere Ausgaben</label>
+  <select id="z-archiv"></select>
+  <p class="fuss" id="z-fuss"></p>
+</main>
+
+<section id="v-lernen" class="rahmen" aria-label="Lernen" hidden><div class="laedt">Lernkartei lädt</div><iframe title="Lernkartei" data-src="../lernkartei/?einbetten=1"></iframe></section>
+<section id="v-essen" class="rahmen" aria-label="Essen" hidden><div class="laedt">Meal Prep lädt</div><iframe title="Meal Prep" data-src="../mealprep/?einbetten=1"></iframe></section>
+
+<nav class="leiste" aria-label="Bereiche"><div>
+  <a href="#heute" data-v="heute" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 15a5.5 5.5 0 0 1 11 0"/><path d="M3 15h18M7 19h10M12 4.5v2M5.2 8.2l1.4 1.4M18.8 8.2l-1.4 1.4"/></svg>Heute</a>
+  <a href="#zeitung" data-v="zeitung"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg>Zeitung</a>
+  <a href="#lernen" data-v="lernen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="13" height="13" rx="2.5"/><path d="M4 16V6.5A2.5 2.5 0 0 1 6.5 4H16"/></svg>Lernen</a>
+  <a href="#essen" data-v="essen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 4.5c-.8 1 .8 2 0 3M12.5 4.5c-.8 1 .8 2 0 3M16 4.5c-.8 1 .8 2 0 3"/></svg>Essen</a>
+</div></nav>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const lies = k => { try { const t = localStorage.getItem(k); return t ? JSON.parse(t) : null; } catch (e) { return null; } };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+  const LERN = "sani-lernkartei-v1", ESSEN = "mp-einkauf-state", KEY = "tagwerk-schluessel";
+  const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
+  let zeitung = null, privat = null;
+
+  // ---------- Ansichten über die Adresse (#heute, #zeitung, #lernen, #essen) ----------
+  function rahmenLaden(v) {
+    const f = document.querySelector("#v-" + v + " iframe");
+    if (f && !f.getAttribute("src")) { f.addEventListener("load", () => { const l = f.previousElementSibling; if (l) l.hidden = true; }, { once: true }); f.src = f.dataset.src; }
+  }
+  function zeige() {
+    let v = location.hash.slice(1);
+    if (!ANSICHTEN.includes(v)) v = "heute";
+    ANSICHTEN.forEach(a => { $("v-" + a).hidden = a !== v; });
+    document.querySelectorAll("nav.leiste a").forEach(a => { if (a.dataset.v === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    if (v === "lernen" || v === "essen") rahmenLaden(v);
+    if (v === "heute") zeichneHeute();
+    if (v === "zeitung" || v === "heute") window.scrollTo(0, 0);
+    document.title = v === "heute" ? "Tagwerk" : "Tagwerk · " + v.charAt(0).toUpperCase() + v.slice(1);
+  }
+  window.addEventListener("hashchange", zeige);
+
+  // ---------- Startseite ----------
+  function heuteISO(plus) { const d = new Date(); d.setHours(12, 0, 0, 0); if (plus) d.setDate(d.getDate() + plus); return d.toISOString().slice(0, 10); }
+  function zeichneHeute() {
+    const jetzt = new Date(), h = jetzt.getHours();
+    $("gruss").textContent = h < 11 ? "Guten Morgen" : h < 18 ? "Hallo Gregor" : "Guten Abend";
+    $("h-heute").textContent = WT[jetzt.getDay()] + ", " + jetzt.getDate() + ". " + jetzt.toLocaleDateString("de-AT", { month: "long" });
+    // Lernen
+    const lz = lies(LERN + "-zusammenfassung");
+    if (lz && lz.kurse && lz.kurse.length) {
+      const k = lz.kurse.find(x => x.id === lz.bereich) || lz.kurse[0];
+      $("k-faellig").textContent = k.faellig;
+      $("k-faellig-text").textContent = k.faellig === 1 ? "Karte fällig" : "Karten fällig";
+      $("k-lernen-bereich").textContent = k.name;
+      $("k-lernen-zeile").innerHTML = lz.neuHeute ? "Dazu <b>" + lz.neuHeute + " neue</b> für heute." : (k.faellig ? "" : "Für heute ist alles geschafft.");
+    } else {
+      $("k-faellig").textContent = "–"; $("k-lernen-zeile").textContent = "Öffne einmal Lernen, dann steht hier, was fällig ist.";
+    }
+    // Essen
+    const ez = lies("mp-einkauf-zusammenfassung");
+    const tage = ez && ez.tage && ez.tage.length ? ez.tage : [{ wd: 2, tag: "Dienstag" }, { wd: 5, tag: "Freitag" }];
+    const heuteWt = jetzt.getDay();
+    const naechster = tage.map(t => Object.assign({ abstand: (t.wd - heuteWt + 7) % 7 }, t)).sort((a, b) => a.abstand - b.abstand)[0];
+    $("k-kochtag").textContent = naechster.abstand === 0 ? "Heute" : naechster.abstand === 1 ? "Morgen" : WT[naechster.wd];
+    $("k-kochtag-text").textContent = naechster.abstand > 1 ? "in " + naechster.abstand + " Tagen kochen" : "wird gekocht";
+    $("k-essen-tage").textContent = "Kochtage " + tage.map(t => WT[t.wd].slice(0, 2)).join(" und ");
+    if (ez && naechster.gesamt != null) {
+      const drin = naechster.gesamt - naechster.offen;
+      $("k-balken").style.width = (naechster.gesamt ? 100 * drin / naechster.gesamt : 0) + "%";
+      $("k-essen-zeile").innerHTML = naechster.offen ? "Einkauf: <b>" + naechster.offen + " von " + naechster.gesamt + "</b> noch offen." : "Alles für diesen Kochtag ist eingekauft.";
+    } else {
+      $("k-balken").style.width = "0"; $("k-essen-zeile").textContent = "Öffne einmal Essen, dann steht hier, was noch fehlt.";
+    }
+    zeichneZeitungKarte();
+  }
+  function zeichneZeitungKarte() {
+    if (!zeitung) return;
+    $("k-zeitung-nr").textContent = "Ausgabe " + zeitung.ausgabe + (zeitung.datum !== heuteISO() ? " vom " + zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + "." : "");
+    $("k-schlagzeilen").innerHTML = zeitung.kurz.map(t => "<li>" + esc(t) + "</li>").join("");
+    $("wetter-kurz").innerHTML = zeitung.wetter ? "<span>" + esc(zeitung.wetter) + "</span>" + (zeitung.sonne ? "<span>" + esc(zeitung.sonne) + "</span>" : "") : "";
+    const p = $("k-privat");
+    if (privat) {
+      const neu = privat.eintraege.filter(e => e.art === "neu").length;
+      p.innerHTML = "<b>" + privat.anzahl + (privat.anzahl === 1 ? " Punkt" : " Punkte") + " für heute</b>" + (neu ? ", davon " + neu + " neue Antwort" + (neu === 1 ? "" : "en") : "") + ". " + privat.eintraege.slice(0, 2).map(e => esc(e.wer || e.label)).join(", ") + (privat.anzahl > 2 ? " …" : "");
+      p.hidden = false;
+    } else if (lsGet(KEY) === null) {
+      p.innerHTML = "Dein persönlicher Teil ist gesperrt. Schlüssel unten unter Einstellungen eingeben.";
+      p.hidden = false;
+    } else p.hidden = true;
+  }
+
+  // ---------- Zeitung ----------
+  async function ladeZeitung(datei) {
+    try {
+      const r = await fetch("zeitung/" + (datei || "heute.json"), { cache: "no-cache" });
+      if (!r.ok) throw new Error(r.status);
+      zeitung = await r.json();
+    } catch (e) {
+      if (!zeitung) { $("k-schlagzeilen").innerHTML = "<li>Keine Verbindung. Die Zeitung lädt, sobald du wieder online bist.</li>"; $("z-inhalt").innerHTML = "<p>Keine Verbindung.</p>"; }
+      return;
+    }
+    privat = null;
+    await entsperren();
+    zeichneZeitung(); zeichneZeitungKarte();
+    if (!datei) {
+      $("z-archiv").innerHTML = (zeitung.archiv || []).map(a => '<option value="ausgabe-' + a.ausgabe + '.json">Ausgabe ' + a.ausgabe + ", " + esc(a.titel || a.datum) + "</option>").join("");
+    }
+  }
+  function zeichneZeitung() {
+    const z = zeitung;
+    $("z-eyebrow").textContent = "Ausgabe " + z.ausgabe + " · " + (z.titel || z.datum);
+    $("z-wetter").innerHTML = (z.wetter ? "<span>" + esc(z.wetter) + "</span>" : "") + (z.sonne ? "<span>" + esc(z.sonne) + "</span>" : "");
+    const w = privat && privat.warum || {};
+    $("z-inhalt").innerHTML = z.ressorts.map((r, i) => '<h2 class="ressort">' + esc(r.name) + "</h2>" + r.meldungen.map((m, j) =>
+      "<article><h3>" + esc(m.titel) + "</h3><p>" + esc(m.text) + "</p>" + (w[i + "-" + j] ? '<p class="warum">' + esc(w[i + "-" + j]) + "</p>" : "") +
+      (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + "</article>").join("")).join("");
+    $("z-fuss").textContent = z.fuss || "";
+    const p = $("z-privat");
+    if (privat) {
+      p.innerHTML = '<h2 id="z-privat-titel">Heute und Antworten <span>' + privat.anzahl + "</span></h2>" + privat.eintraege.map(e =>
+        '<div class="eintrag"><span class="pille ' + esc(e.art) + '">' + esc(e.label) + "</span><p>" + (e.wer ? "<b>" + esc(e.wer) + "</b> " : "") + esc(e.text) + "</p></div>").join("");
+    } else {
+      p.innerHTML = '<h2 id="z-privat-titel">Heute und Antworten</h2><p style="margin:0;color:var(--muted)">Gesperrt. Gib auf der Startseite unter Einstellungen deinen Schlüssel ein, dann siehst du hier Termine, Antworten und warum eine Meldung dich betrifft.</p>';
+    }
+    p.hidden = false;
+  }
+  $("z-archiv").addEventListener("change", e => ladeZeitung(e.target.value));
+
+  // ---------- Entschlüsseln (AES-256-CBC plus HMAC-SHA256, Schlüssel nur auf dem Gerät) ----------
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function entschluessle(p, key) {
+    const s = key.toUpperCase().replace(/[^A-Z2-7]/g, ""), enc = new TextEncoder();
+    const ek = await crypto.subtle.digest("SHA-256", enc.encode("tagwerk-enc:" + s));
+    const mk = await crypto.subtle.digest("SHA-256", enc.encode("tagwerk-mac:" + s));
+    const iv = b64(p.iv), ct = b64(p.ct), daten = new Uint8Array(iv.length + ct.length);
+    daten.set(iv); daten.set(ct, iv.length);
+    const hk = await crypto.subtle.importKey("raw", mk, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    if (!await crypto.subtle.verify("HMAC", hk, b64(p.mac), daten)) throw new Error("falsch");
+    const ak = await crypto.subtle.importKey("raw", ek, { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, ak, ct)));
+  }
+  async function entsperren() {
+    const k = lsGet(KEY);
+    if (!k || !zeitung || !zeitung.privat || !window.crypto || !crypto.subtle) return false;
+    try { privat = await entschluessle(zeitung.privat, k); return true; } catch (e) { privat = null; return false; }
+  }
+  $("schluessel-speichern").onclick = async () => {
+    const k = $("schluessel").value.trim();
+    if (k.replace(/[^A-Za-z2-7]/g, "").length < 20) { $("schluessel-status").textContent = "Der Schlüssel ist zu kurz."; return; }
+    if (zeitung && zeitung.privat) {
+      try { privat = await entschluessle(zeitung.privat, k); } catch (e) { $("schluessel-status").textContent = "Der Schlüssel passt nicht. Bitte noch einmal prüfen."; return; }
+    }
+    lsSet(KEY, k); $("schluessel").value = "";
+    $("schluessel-status").textContent = "Gespeichert. Dein persönlicher Teil ist jetzt sichtbar.";
+    zeichneZeitung(); zeichneZeitungKarte();
+  };
+  $("schluessel-weg").onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} privat = null; $("schluessel-status").textContent = "Schlüssel von diesem Gerät entfernt."; if (zeitung) { zeichneZeitung(); zeichneZeitungKarte(); } };
+
+  // ---------- Stand übernehmen (Lernkartei und Meal Prep) ----------
+  function rahmenNeu(v) { const f = document.querySelector("#v-" + v + " iframe"); if (f && f.getAttribute("src")) try { f.contentWindow.location.reload(); } catch (e) { f.src = f.dataset.src; } }
+  $("import-los").onclick = () => {
+    const t = $("import").value.trim(), st = $("import-status");
+    const i = t.indexOf("{");
+    let d = null;
+    try { d = JSON.parse(t.slice(i)); } catch (e) { st.textContent = "Das sieht nicht nach einem kopierten Stand aus. Bitte den ganzen Text einfügen."; return; }
+    if (/^Meal Prep Stand/.test(t) || (d && Array.isArray(d.cook))) {
+      const alt = lies(ESSEN) || {};
+      const neu = Object.assign({}, alt, d, { checked: Object.assign({}, alt.checked || {}, d.checked || {}) });
+      if (!lsSet(ESSEN, JSON.stringify(neu))) { st.textContent = "Speichern ging nicht. Ist der private Modus an?"; return; }
+      st.textContent = "Meal Prep übernommen, " + Object.keys(neu.checked).length + " Haken.";
+      rahmenNeu("essen");
+    } else {
+      const alt = lies(LERN) || {};
+      let n = 0;
+      for (const [id, p] of Object.entries(d)) {
+        if (!p || typeof p !== "object" || !("d" in p)) continue;
+        if (!alt[id] || (p.z || 0) > (alt[id].z || 0)) { alt[id] = p; n++; }
+      }
+      if (!n && !Object.keys(alt).length) { st.textContent = "Darin war kein Lernstand."; return; }
+      if (!lsSet(LERN, JSON.stringify(alt))) { st.textContent = "Speichern ging nicht. Ist der private Modus an?"; return; }
+      st.textContent = "Lernstand übernommen, " + n + " Karten aktualisiert, " + Object.keys(alt).length + " insgesamt.";
+      rahmenNeu("lernen");
+    }
+    $("import").value = "";
+    zeichneHeute();
+  };
+
+  // ---------- Start ----------
+  window.addEventListener("storage", e => { if (!e.key || /zusammenfassung$/.test(e.key)) zeichneHeute(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("v-heute").hidden) { zeichneHeute(); } });
+  zeige();
+  ladeZeitung();
+  // Lernen und Essen im Hintergrund vorladen, damit die Zahlen auf der Startseite frisch sind und der Wechsel sofort geht
+  const vorladen = () => { rahmenLaden("lernen"); setTimeout(() => rahmenLaden("essen"), 400); };
+  if ("requestIdleCallback" in window) requestIdleCallback(vorladen, { timeout: 1500 }); else setTimeout(vorladen, 800);
+  if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+})();
+</script>
+</body>
+</html>

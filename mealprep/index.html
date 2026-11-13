@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <style>*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;padding-top:env(safe-area-inset-top,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
-<script>window.MP_START = {"checked": {"0-aepfel": true, "0-basmati": true, "0-beeren": true, "0-brot": true, "0-chia": true, "0-erbsen": true, "0-gewuerze": true, "0-hafer": true, "0-huhn": true, "0-hummus": true, "0-ingwer": true, "0-karotten": true, "0-kartoffeln": true, "0-kidney": true, "0-knoblauch": true, "0-kokos": true, "0-linsen": true, "0-milch": true, "0-nuesse": true, "0-oel": true, "0-paprika": true, "0-rind": true, "0-schoko": true, "0-skyr": true, "0-spinat": true, "0-tmark": true, "0-tomdose": true, "0-walnuss": true, "0-zwiebel": true, "k-boxen": true, "k-brett": true, "k-dosen": true, "k-glaeser": true, "k-handschuh": true, "k-kelle": true, "k-kochloeffel": true, "k-messbecher": true, "k-messer": true, "k-reibe": true, "k-schaeler": true, "k-sieb": true, "k-topfklein": true, "k-waage": true}, "cook": [{"days": 4, "dishes": ["chili"], "fr": true, "sn": true, "wd": 3}, {"days": 4, "dishes": ["teri", "bolo"], "fr": true, "sn": true, "wd": 5}], "v": 1};</script>
+
 </head>
 <body>
 <title>Meal Prep Einkauf</title>
@@ -167,8 +167,14 @@ details.rec[open] summary::after { content: "−"; }
 .recbody .keep { background: var(--soft); border-radius: 10px; padding: 8px 10px; font-size: 0.88rem; }
 .foot { font-size: 0.8rem; color: var(--muted); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .bar i, .box { transition: none; } }
+.linkknopf { font: inherit; font-size: 0.8rem; color: var(--muted); background: none; border: 0; text-decoration: underline; min-height: 44px; padding: 0 8px; cursor: pointer; }
+#uebertragenText { width: 100%; min-height: 80px; font: 12px/1.3 ui-monospace, monospace; }
+/* Eingebettet in Tagwerk: Kopfzeile aus, Übertragen-Knopf aus */
+.eingebettet header.top, .eingebettet #uebertragenZeile { display: none; }
+.eingebettet .wrap { padding-block: 12px 24px; }
 </style>
 
+<script>if (/[?&]einbetten(=|&|$)/.test(location.search)) document.documentElement.classList.add("eingebettet");</script>
 <div class="wrap">
   <header class="top">
     <h1>Meal Prep</h1>
@@ -195,6 +201,7 @@ details.rec[open] summary::after { content: "−"; }
   </section>
 
   <p class="foot">Mengen sind der Bedarf, Packungen einfach aufrunden. Nährwerte sind Richtwerte.</p>
+  <p class="foot" id="uebertragenZeile"><button type="button" class="linkknopf" id="uebertragen">Haken für Tagwerk kopieren</button><textarea id="uebertragenText" readonly hidden aria-label="Stand zum Kopieren"></textarea></p>
 </div>
 
 <script>
@@ -594,7 +601,22 @@ details.rec[open] summary::after { content: "−"; }
     $("prog").textContent = rows.length ? done + " von " + rows.length + " im Wagen" : "";
     $("barFill").style.width = rows.length ? (100 * done / rows.length) + "%" : "0";
     $("reset").hidden = done === 0;
+    zusammenfassung();
   }
+
+  // Kurzfassung für die Startseite von Tagwerk: je Kochtag offene und alle Zeilen
+  function zusammenfassung() {
+    const alt = tab;
+    try {
+      const tage = state.cook.map((c, i) => { tab = i; const rows = currentRows(); return { wd: c.wd, tag: WD[c.wd], tage: c.days, offen: rows.filter(r => !state.checked[r.key]).length, gesamt: rows.length }; });
+      lsSet("mp-einkauf-zusammenfassung", JSON.stringify({ stand: Date.now(), tage }));
+    } catch (e) { } finally { tab = alt; }
+  }
+  $("uebertragen").onclick = async () => {
+    const t = "Meal Prep Stand " + new Date().toISOString().slice(0, 10) + "\n" + JSON.stringify(state);
+    try { await navigator.clipboard.writeText(t); $("uebertragen").textContent = "Kopiert. In Tagwerk unter Stand übernehmen einfügen."; }
+    catch (e) { const a = $("uebertragenText"); a.value = t; a.hidden = false; a.select(); $("uebertragen").textContent = "Text unten markieren und kopieren"; }
+  };
 
   function ingLine(id, q, note) {
     const it = ITEMS[id];
