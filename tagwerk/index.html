@@ -22,7 +22,7 @@
   --bg: #f4f1ea; --surface: #ffffff; --surface-2: #ece7dc; --ink: #17202a; --muted: #5b6570; --line: #e0d9cb;
   --sun: #e8a93b; --brand: #15212c; --focus: #1d5fd1;
   --zeitung: #b3343a; --zeitung-soft: #f6e3e4;
-  --lernen: #8f6310; --lernen-soft: #f6ead0;
+  --lernen: #85590c; --lernen-soft: #f6ead0;
   --essen: #2b6a4c; --essen-soft: #e1ede5;
   --leiste: 58px;
   --f-text: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
@@ -43,6 +43,8 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-text); font-size: 1.0625rem; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
+/* iPhone: Schrift wächst mit der Systemeinstellung (Dynamic Type) */
+@supports (font: -apple-system-body) { html { font: -apple-system-body; } body { font-size: 1rem; } }
 a { color: inherit; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
 .ansicht { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -146,14 +148,14 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
 
   <section class="karte lernen" aria-labelledby="k-lernen">
     <h2 id="k-lernen">Lernen <span id="k-lernen-bereich"></span></h2>
-    <div class="gross"><b id="k-faellig">–</b><span id="k-faellig-text">Karten fällig</span></div>
+    <div class="gross"><b id="k-faellig">…</b><span id="k-faellig-text">Karten fällig</span></div>
     <p class="zeile" id="k-lernen-zeile"></p>
     <a class="knopf" href="#lernen">Jetzt lernen</a>
   </section>
 
   <section class="karte essen" aria-labelledby="k-essen">
     <h2 id="k-essen">Essen <span id="k-essen-tage"></span></h2>
-    <div class="gross"><b id="k-kochtag">–</b><span id="k-kochtag-text"></span></div>
+    <div class="gross"><b id="k-kochtag">…</b><span id="k-kochtag-text"></span></div>
     <div class="balken" aria-hidden="true"><i id="k-balken" style="width:0"></i></div>
     <p class="zeile" id="k-essen-zeile"></p>
     <a class="knopf" href="#essen">Zur Einkaufsliste</a>
@@ -249,7 +251,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
       $("k-lernen-bereich").textContent = k.name;
       $("k-lernen-zeile").innerHTML = lz.neuHeute ? "Dazu <b>" + lz.neuHeute + " neue</b> für heute." : (k.faellig ? "" : "Für heute ist alles geschafft.");
     } else {
-      $("k-faellig").textContent = "–"; $("k-lernen-zeile").textContent = "Öffne einmal Lernen, dann steht hier, was fällig ist.";
+      $("k-faellig").textContent = "…"; $("k-lernen-zeile").textContent = "Öffne einmal Lernen, dann steht hier, was fällig ist.";
     }
     // Essen
     const ez = lies("mp-einkauf-zusammenfassung");
