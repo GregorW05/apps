@@ -94,6 +94,10 @@ textarea { min-height: 96px; font-size: .85rem; font-family: ui-monospace, Menlo
 .reihe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .meldung-status { margin: 6px 0 0; font-size: .9rem; color: var(--muted); min-height: 1.3em; }
 .klein { font-size: .85rem; color: var(--muted); text-align: center; margin: 4px 0 0; }
+.themen { --akzent: var(--zeitung); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; }
+.themen h2 { margin: 0; font-size: 1.05rem; }
+.themen p { margin: 0; color: var(--muted); font-size: .95rem; }
+.themen p b { color: var(--ink); font-weight: 600; }
 
 /* Zeitung */
 .zt h1 { font-family: var(--f-zeitung); font-size: 2.1rem; }
@@ -143,7 +147,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     <h2 id="k-zeitung">Zeitung <span id="k-zeitung-nr"></span></h2>
     <ul class="schlagzeilen" id="k-schlagzeilen"><li>Lädt die Ausgabe</li></ul>
     <div class="privat" id="k-privat" hidden></div>
-    <a class="knopf" href="#zeitung">Zeitung lesen</a>
+    <div class="reihe"><a class="knopf" href="#zeitung">Zeitung lesen</a><a class="knopf leise" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen</a></div>
   </section>
 
   <section class="karte lernen" aria-labelledby="k-lernen">
@@ -191,6 +195,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   </header>
   <section class="persoenlich" id="z-privat" aria-labelledby="z-privat-titel" hidden></section>
   <div class="block" id="z-inhalt"></div>
+  <section class="themen" aria-labelledby="z-themen-titel"><h2 id="z-themen-titel">Deine Themen</h2><p id="z-themen">Ab der nächsten Ausgabe wählt die Zeitung danach aus.</p><a class="knopf" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen bewerten, 1 bis 10</a></section>
   <label class="eyebrow" for="z-archiv">Ältere Ausgaben</label>
   <select id="z-archiv"></select>
   <p class="fuss" id="z-fuss"></p>
@@ -312,6 +317,10 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
       "<article><h3>" + esc(m.titel) + "</h3><p>" + esc(m.text) + "</p>" + (w[i + "-" + j] ? '<p class="warum">' + esc(w[i + "-" + j]) + "</p>" : "") +
       (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + "</article>").join("")).join("");
     $("z-fuss").textContent = z.fuss || "";
+    const th = privat && privat.themen;
+    if (th && ((th.oben && th.oben.length) || (th.nie && th.nie.length))) {
+      $("z-themen").innerHTML = (th.oben.length ? "Oben " + th.oben.map(t => "<b>" + esc(t[0]) + "</b> " + esc(t[1])).join(", ") + ". " : "") + (th.nie.length ? "Nie " + th.nie.map(esc).join(", ") + "." : "");
+    } else $("z-themen").textContent = "Ab der nächsten Ausgabe wählt die Zeitung danach aus.";
     const p = $("z-privat");
     if (privat) {
       p.innerHTML = '<h2 id="z-privat-titel">Heute und Antworten <span>' + privat.anzahl + "</span></h2>" + privat.eintraege.map(e =>
