@@ -103,7 +103,7 @@ textarea { min-height: 96px; font-size: .85rem; font-family: ui-monospace, Menlo
 .zt h1 { font-family: var(--f-zeitung); font-size: 2.1rem; }
 .zt .block { display: grid; gap: 12px; }
 .zt h2.ressort { margin: 10px 0 0; padding-top: 12px; border-top: 2px solid var(--ink); font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.zt article { display: grid; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.zt article { display: grid; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .zt article:last-child { border-bottom: 0; }
 .zt article h3 { margin: 0; font-family: var(--f-zeitung); font-size: 1.3rem; line-height: 1.25; text-wrap: balance; }
 .zt article p { margin: 0; max-width: 65ch; }
@@ -325,7 +325,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     $("z-wetter").innerHTML = (z.wetter ? "<span>" + esc(z.wetter) + "</span>" : "") + (z.sonne ? "<span>" + esc(z.sonne) + "</span>" : "");
     const w = privat && privat.warum || {};
     $("z-inhalt").innerHTML = z.ressorts.map((r, i) => '<h2 class="ressort">' + esc(r.name) + "</h2>" + r.meldungen.map((m, j) =>
-      "<article><h3>" + esc(m.titel) + "</h3><p>" + esc(m.text) + "</p>" + (w[i + "-" + j] ? '<p class="warum">' + esc(w[i + "-" + j]) + "</p>" : "") +
+      "<article><h3>" + esc(m.titel) + "</h3>" + String(m.text || "").split(/\n{2,}/).filter(x => x.trim()).map(x => "<p>" + esc(x) + "</p>").join("") + (w[i + "-" + j] ? '<p class="warum">' + esc(w[i + "-" + j]) + "</p>" : "") +
       (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + "</article>").join("")).join("");
     $("z-fuss").textContent = z.fuss || "";
     const th = privat && privat.themen;
