@@ -260,6 +260,17 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     }
     // Essen
     const ez = lies("mp-einkauf-zusammenfassung");
+    if (ez && ez.v === 2) {
+      // Seit 14.11.2026 ein Einkauf für frei wählbar viele Tage statt zwei fester Kochtage
+      $("k-kochtag").textContent = ez.tage + (ez.tage === 1 ? " Tag" : " Tage");
+      $("k-kochtag-text").textContent = "Einkauf, reicht bis " + ez.bis + " Mittag";
+      $("k-essen-tage").textContent = ez.gefrierfach ? ez.gefrierfach + (ez.gefrierfach === 1 ? " Box" : " Boxen") + " im Gefrierfach" : "";
+      const drin = ez.gesamt - ez.offen;
+      $("k-balken").style.width = (ez.gesamt ? 100 * drin / ez.gesamt : 0) + "%";
+      $("k-essen-zeile").innerHTML = ez.offen ? "Einkauf: <b>" + ez.offen + " von " + ez.gesamt + "</b> noch offen." : "Alles eingekauft.";
+      zeichneZeitungKarte();
+      return;
+    }
     const tage = ez && ez.tage && ez.tage.length ? ez.tage : [{ wd: 2, tag: "Dienstag" }, { wd: 5, tag: "Freitag" }];
     const heuteWt = jetzt.getDay();
     const naechster = tage.map(t => Object.assign({ abstand: (t.wd - heuteWt + 7) % 7 }, t)).sort((a, b) => a.abstand - b.abstand)[0];
