@@ -8,10 +8,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Tagwerk">
+<meta name="apple-mobile-web-app-title" content="Wieser Ventures">
 <meta name="robots" content="noindex">
 <meta name="description" content="Zeitung, Lernkartei und Meal Prep in einer App">
-<title>Tagwerk</title>
+<title>Wieser Ventures</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -138,7 +138,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
 
 <main id="v-heute" class="ansicht" aria-labelledby="h-heute">
   <header>
-    <p class="eyebrow" id="gruss">Tagwerk</p>
+    <p class="eyebrow" id="gruss">Wieser Ventures</p>
     <h1 id="h-heute">Heute</h1>
     <p class="wetter" id="wetter-kurz"></p>
   </header>
@@ -184,7 +184,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
       </div>
     </div>
   </details>
-  <p class="klein">Tagwerk · <a href="../">alle Apps</a></p>
+  <p class="klein">Wieser Ventures · <a href="../">alle Apps</a></p>
 </main>
 
 <main id="v-zeitung" class="ansicht zt" aria-labelledby="h-zeitung" hidden>
@@ -237,7 +237,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     if (v === "lernen" || v === "essen") rahmenLaden(v);
     if (v === "heute") zeichneHeute();
     if (v === "zeitung" || v === "heute") window.scrollTo(0, 0);
-    document.title = v === "heute" ? "Tagwerk" : "Tagwerk · " + v.charAt(0).toUpperCase() + v.slice(1);
+    document.title = v === "heute" ? "Wieser Ventures" : "Wieser Ventures · " + v.charAt(0).toUpperCase() + v.slice(1);
   }
   window.addEventListener("hashchange", zeige);
 
