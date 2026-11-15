@@ -39,13 +39,26 @@
   const zeit = ms => { const s = Math.round(ms / 1000); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 
   // ---------- Schach: Tagesrätsel von lichess.org ----------
+  // Figuren seit 15.11.2026 als Bilder (Satz cburnett von Colin M.L. Burnett, CC BY-SA 3.0, über das chessground-Paket auf jsDelivr),
+  // Züge per Ziehen oder Antippen. Ohne Bilder fallen die Figuren auf Schriftzeichen zurück.
   const FIG = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟", K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙" };
+  const ART = { k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn" };
   const FNAME = { k: "König", q: "Dame", r: "Turm", b: "Läufer", n: "Springer", p: "Bauer" };
   const THEMEN = { mateIn1: "Matt in 1", mateIn2: "Matt in 2", mateIn3: "Matt in 3", mateIn4: "Matt in 4", mateIn5: "Matt in 5", fork: "Gabel", pin: "Fesselung", skewer: "Spieß", sacrifice: "Opfer", endgame: "Endspiel", middlegame: "Mittelspiel", opening: "Eröffnung", discoveredAttack: "Abzug", deflection: "Ablenkung", promotion: "Umwandlung", hangingPiece: "Ungedeckte Figur", backRankMate: "Grundreihenmatt", crushing: "Entscheidender Vorteil", advantage: "Vorteil", short: "kurz", long: "lang" };
+  const FIGUREN_CSS = "https://cdn.jsdelivr.net/npm/chessground@9.1.1/assets/chessground.cburnett.css";
+  let figurenBilder = false;
+  function ladeFiguren() {
+    if (document.getElementById("wv-figuren")) return;
+    const l = document.createElement("link"); l.id = "wv-figuren"; l.rel = "stylesheet"; l.href = FIGUREN_CSS;
+    l.onload = () => { figurenBilder = true; document.querySelectorAll(".brett").forEach(b => b.classList.add("bilder")); };
+    document.head.appendChild(l);
+  }
+  const figHtml = f => '<piece class="' + (f === f.toUpperCase() ? "white " : "black ") + ART[f.toLowerCase()] + '" data-g="' + FIG[f] + '︎"></piece>';
   function ladeSkript(src) { return new Promise((ok, f) => { if (window.Chess) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = f; document.head.appendChild(s); }); }
 
   async function schach(box, rnd, fertig) {
     box.innerHTML = '<p class="sp-meta">Lädt das Tagesrätsel von lichess.org …</p>';
+    ladeFiguren();
     let p;
     try {
       const c = lies("wv-schach");
@@ -64,28 +77,76 @@
     if (!c.load_pgn(p.game.pgn)) { c.reset(); p.game.pgn.split(/\s+/).forEach(m => { if (m && !/^\d+\./.test(m)) c.move(m, { sloppy: true }); }); }
     const start = c.fen(), lsg = p.puzzle.solution, ich = c.turn();
     const themen = (p.puzzle.themes || []).map(t => THEMEN[t]).filter(Boolean).slice(0, 2).join(", ");
-    let schritt = 0, sel = null, zuletzt = null, fehler = 0, vorbei = false, gezeigt = false;
+    let schritt = 0, sel = null, zuletzt = null, fehler = 0, vorbei = false, gezeigt = false, ziehen = null, sperreKlick = 0;
     const uci = m => m.from + m.to + (m.promotion || "");
     function zeichne(msg) {
       const felder = [];
       c.fen().split(" ")[0].split("/").forEach((r, ri) => { let fi = 0; for (const ch of r) { if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) felder.push({ sq: "abcdefgh"[fi++] + (8 - ri), f: null }); else felder.push({ sq: "abcdefgh"[fi++] + (8 - ri), f: ch }); } });
       const ord = ich === "w" ? felder : felder.slice().reverse();
       const ziele = sel ? c.moves({ square: sel, verbose: true }).map(m => m.to) : [];
-      let h = '<p class="sp-text"><b>' + (ich === "w" ? "Weiß" : "Schwarz") + " am Zug.</b> Finde den besten Zug" + (themen ? " (" + esc(themen) + ")" : "") + '.</p><div class="brett" aria-label="Schachbrett">';
-      ord.forEach(x => {
+      let h = '<p class="sp-text"><b>' + (ich === "w" ? "Weiß" : "Schwarz") + " am Zug.</b> Finde den besten Zug" + (themen ? " (" + esc(themen) + ")" : "") + '.</p><div class="brett cg-wrap' + (figurenBilder ? " bilder" : "") + '" aria-label="Schachbrett">';
+      ord.forEach((x, n) => {
         const dunkel = ("abcdefgh".indexOf(x.sq[0]) + +x.sq[1]) % 2 === 1;
-        const kl = [dunkel ? "d" : "h", sel === x.sq ? "sel" : "", ziele.includes(x.sq) ? "ziel" : "", zuletzt && zuletzt.includes(x.sq) ? "zuletzt" : ""].filter(Boolean).join(" ");
+        const kl = [dunkel ? "d" : "h", sel === x.sq ? "sel" : "", ziele.includes(x.sq) ? (x.f ? "ziel schlag" : "ziel") : "", zuletzt && zuletzt.includes(x.sq) ? "zuletzt" : ""].filter(Boolean).join(" ");
         const name = x.f ? (x.f === x.f.toUpperCase() ? "weißer " : "schwarzer ") + FNAME[x.f.toLowerCase()] : "leer";
-        h += '<button type="button" data-sq="' + x.sq + '" class="' + kl + '" aria-label="' + x.sq + ", " + name + '">' + (x.f ? FIG[x.f] + "︎" : "") + "</button>";
+        const koord = (n % 8 === 0 ? '<i class="rang">' + x.sq[1] + "</i>" : "") + (n >= 56 ? '<i class="linie">' + x.sq[0] + "</i>" : "");
+        h += '<button type="button" data-sq="' + x.sq + '" class="' + kl + '" aria-label="' + x.sq + ", " + name + '">' + koord + (x.f ? figHtml(x.f) : "") + "</button>";
       });
-      h += '</div><p class="sp-meta" role="status">' + esc(msg || (vorbei ? "" : "Tippe eine Figur, dann das Zielfeld.")) + "</p>";
+      h += '</div><p class="sp-meta" role="status">' + esc(msg || (vorbei ? "" : "Zieh eine Figur auf ihr Zielfeld oder tippe Figur und Feld nacheinander an.")) + "</p>";
       h += '<div class="reihe"><button class="knopf leise" type="button" data-a="neu">Von vorn</button>' + (vorbei ? "" : '<button class="knopf leise" type="button" data-a="lsg">Lösung zeigen</button>') + "</div>";
-      h += '<p class="sp-meta">Rätsel ' + esc(p.puzzle.id) + " von lichess.org, Wertung " + esc(p.puzzle.rating) + ".</p>";
+      h += '<p class="sp-meta">Rätsel ' + esc(p.puzzle.id) + " von lichess.org, Wertung " + esc(p.puzzle.rating) + ". Figuren cburnett (CC BY-SA 3.0).</p>";
       box.innerHTML = h;
-      box.querySelectorAll(".brett button").forEach(b => b.onclick = () => klick(b.dataset.sq));
+      const brett = box.querySelector(".brett");
+      brett.querySelectorAll("button").forEach(b => b.onclick = () => { if (Date.now() - sperreKlick < 400) return; klick(b.dataset.sq); });
+      brett.addEventListener("pointerdown", greifen);
       box.querySelector('[data-a="neu"]').onclick = () => { c.load(start); schritt = 0; sel = null; zuletzt = null; vorbei = false; gezeigt = false; zeichne(); };
       const l = box.querySelector('[data-a="lsg"]'); if (l) l.onclick = zeigeLösung;
       if (vorbei && !gezeigt) erfolg(box, "Gelöst" + (fehler ? " mit " + fehler + (fehler === 1 ? " Fehlversuch" : " Fehlversuchen") : " ohne Fehler") + ".");
+    }
+    // Ziehen: Figur greifen, über dem Brett führen, auf dem Zielfeld loslassen
+    function greifen(e) {
+      if (vorbei || e.button > 0) return;
+      const b = e.target.closest("button[data-sq]"); if (!b) return;
+      const f = c.get(b.dataset.sq); if (!f || f.color !== ich) return;
+      e.preventDefault();
+      ziehen = { von: b.dataset.sq, b, x: e.clientX, y: e.clientY, aktiv: false, geist: null, id: e.pointerId };
+      window.addEventListener("pointermove", führen, { passive: false });
+      window.addEventListener("pointerup", loslassen);
+      window.addEventListener("pointercancel", abbrechen);
+    }
+    function führen(e) {
+      if (!ziehen || e.pointerId !== ziehen.id) return;
+      e.preventDefault();
+      if (!ziehen.aktiv) {
+        if (Math.hypot(e.clientX - ziehen.x, e.clientY - ziehen.y) < 6) return;
+        ziehen.aktiv = true;
+        const r = ziehen.b.getBoundingClientRect(), fig = ziehen.b.querySelector("piece");
+        const g = document.createElement("div"); g.className = "geist cg-wrap" + (figurenBilder ? " bilder" : "");
+        g.style.width = g.style.height = Math.round(r.width * 1.25) + "px";
+        g.innerHTML = fig ? fig.outerHTML : ""; document.body.appendChild(g); ziehen.geist = g;
+        ziehen.b.classList.add("hebt");
+        const brett = ziehen.b.parentElement;
+        brett.querySelectorAll("button").forEach(x => x.classList.remove("sel", "ziel", "schlag"));
+        ziehen.b.classList.add("sel");
+        c.moves({ square: ziehen.von, verbose: true }).forEach(m => { const z = brett.querySelector('[data-sq="' + m.to + '"]'); if (z) z.classList.add("ziel"); if (z && z.querySelector("piece")) z.classList.add("schlag"); });
+      }
+      ziehen.geist.style.transform = "translate(" + (e.clientX - ziehen.geist.offsetWidth / 2) + "px," + (e.clientY - ziehen.geist.offsetHeight * 0.62) + "px)";
+      const unter = document.elementFromPoint(e.clientX, e.clientY), feld = unter && unter.closest(".brett button[data-sq]");
+      ziehen.b.parentElement.querySelectorAll("button.ueber").forEach(x => x.classList.remove("ueber"));
+      if (feld) feld.classList.add("ueber");
+    }
+    function aufräumen() {
+      window.removeEventListener("pointermove", führen); window.removeEventListener("pointerup", loslassen); window.removeEventListener("pointercancel", abbrechen);
+      if (ziehen && ziehen.geist) ziehen.geist.remove();
+    }
+    function abbrechen() { aufräumen(); ziehen = null; zeichne(); }
+    function loslassen(e) {
+      if (!ziehen) return;
+      const z = ziehen; aufräumen(); ziehen = null;
+      if (!z.aktiv) return;   // war nur ein Antippen, das erledigt der Klick
+      sperreKlick = Date.now();
+      const unter = document.elementFromPoint(e.clientX, e.clientY), feld = unter && unter.closest(".brett button[data-sq]");
+      if (feld && feld.dataset.sq !== z.von) { sel = z.von; klick(feld.dataset.sq); } else { sel = z.von; zeichne(); }
     }
     function gegner() {
       setTimeout(() => { const g = lsg[schritt]; const z = c.move({ from: g.slice(0, 2), to: g.slice(2, 4), promotion: g[4] }); if (z) zuletzt = [z.from, z.to]; schritt++; zeichne("Richtig. Dein nächster Zug."); }, 550);
