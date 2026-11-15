@@ -79,6 +79,10 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .pille.ueber { background: rgba(179, 38, 58, .13); color: var(--rot); }
 .eintrag.todo p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
 .eintrag.todo.voll p { display: block; -webkit-line-clamp: unset; }
+.eintrag.todo { grid-template-columns: auto auto 1fr; }
+.haken { width: 26px; height: 26px; margin: -3px 0 0; padding: 0; border: 2px solid var(--ozean); border-radius: 4px; background: transparent; color: var(--navy); font: 700 17px/1 system-ui, sans-serif; cursor: pointer; display: grid; place-items: center; }
+.haken[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); }
+.eintrag.todo.erledigt p, .eintrag.todo.erledigt .pille { text-decoration: line-through; opacity: .5; }
 details.mehr { border-top: 1px solid var(--line); padding-top: 4px; }
 details.mehr summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; font-weight: 600; color: var(--hl); }
 details.mehr summary::-webkit-details-marker { display: none; }
@@ -329,6 +333,8 @@ html.laptop .reihe.drei { max-width: 460px; }
   layout();
   if (breitMq.addEventListener) breitMq.addEventListener("change", () => { layout(); zeichneZeitungKarte(); });
   const LERN = "sani-lernkartei-v1", ESSEN = "mp-einkauf-state", KEY = "tagwerk-schluessel";
+  const HAKEN = "wv-haken", SCHLANGE = "wv-haken-schlange"; // Haken für OneNote-To-dos, siehe unten
+  const hakenStand = () => lies(HAKEN) || {};
   const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
   let zeitung = null, privat = null, geladenUm = 0;
@@ -414,16 +420,72 @@ html.laptop .reihe.drei { max-width: 460px; }
       (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
     // To-dos aus Gregors OneNote-Liste (export_app.py), überfällige und heutige oben, der Rest ausklappbar
     const td = Array.isArray(privat.todos) ? privat.todos : [], tag = heuteISO();
-    const tdZeile = x => { const u = x.f && x.f < tag, j = x.f === tag; return '<div class="eintrag todo"><span class="pille ' + (u ? "ueber" : j ? "neu" : "offen") + '">' + esc(u ? "seit " + x.d : j ? "heute" : x.d ? "bis " + x.d : "offen") + "</span><p>" + esc(x.t) + "</p></div>"; };
+    // Haken (seit 15.11.2026): abgehakte bleiben durchgestrichen stehen, bis der Server sie in OneNote gesetzt hat und sie aus der Liste fallen
+    const hk = hakenStand(), daHs = td.map(x => x.h).filter(Boolean);
+    if (Object.keys(hk).some(h => !daHs.includes(h))) { Object.keys(hk).forEach(h => { if (!daHs.includes(h)) delete hk[h]; }); lsSet(HAKEN, JSON.stringify(hk)); }
+    const tdZeile = x => { const u = x.f && x.f < tag, j = x.f === tag, an = !!(x.h && hk[x.h]); return '<div class="eintrag todo' + (an ? " erledigt" : "") + '">' + (x.h ? '<button type="button" class="haken" data-h="' + esc(x.h) + '" aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + "</button>" : "<span></span>") + '<span class="pille ' + (u ? "ueber" : j ? "neu" : "offen") + '">' + esc(u ? "seit " + x.d : j ? "heute" : x.d ? "bis " + x.d : "offen") + "</span><p>" + esc(x.t) + "</p></div>"; };
     const sicht = td.filter(x => x.f && x.f <= tag).slice(0, 4), rest = td.filter(x => !sicht.includes(x));
-    const ueber = td.filter(x => x.f && x.f < tag).length, anzahl = td.length + kalTodo.length;
+    const offenTd = td.filter(x => !(x.h && hk[x.h]));
+    const ueber = offenTd.filter(x => x.f && x.f < tag).length, anzahl = offenTd.length + kalTodo.length;
     ti.textContent = anzahl ? anzahl + " offen" + (ueber ? ", " + ueber + " überfällig" : "") : "";
     tb.innerHTML = (neu.length + kalTodo.length + td.length ? "" : '<p class="zeile">Nichts offen.</p>') +
       neu.map(zeile).join("") + kalTodo.map(zeile).join("") + sicht.map(tdZeile).join("") +
       (rest.length ? '<details class="mehr"><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
-      (warten.length ? '<details class="mehr"><summary>Warten auf Antwort (' + warten.length + ")</summary><div class=\"liste-innen\">" + warten.map(zeile).join("") + "</div></details>" : "");
+      (warten.length ? '<details class="mehr"><summary>Warten auf Antwort (' + warten.length + ")</summary><div class=\"liste-innen\">" + warten.map(zeile).join("") + "</div></details>" : "") +
+      '<p class="sp-meta" id="k-todos-sync"></p>';
     tb.querySelectorAll(".eintrag.todo p").forEach(x => x.onclick = () => x.parentElement.classList.toggle("voll"));
+    tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const x = td.find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true"); });
+    hakenInfo();
   }
+
+  // ---------- Haken an OneNote (seit 15.11.2026): verschlüsselt über ntfy.sh an ein geheimes Thema, todo-sync.ps1 auf dem Server setzt sie jede Minute ----------
+  const hex = b => Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, "0")).join("");
+  const zuB64 = u => btoa(String.fromCharCode.apply(null, Array.from(u)));
+  async function schluesselTeile(key) {
+    const s = key.toUpperCase().replace(/[^A-Z2-7]/g, ""), enc = new TextEncoder(), d = t => crypto.subtle.digest("SHA-256", enc.encode(t + s));
+    return { ek: await d("tagwerk-enc:"), mk: await d("tagwerk-mac:"), thema: "wv" + hex(await d("tagwerk-todo-thema:")).slice(0, 24) };
+  }
+  async function verschluessle(obj, key) {
+    const { ek, mk } = await schluesselTeile(key), iv = crypto.getRandomValues(new Uint8Array(16));
+    const ak = await crypto.subtle.importKey("raw", ek, { name: "AES-CBC" }, false, ["encrypt"]);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-CBC", iv }, ak, new TextEncoder().encode(JSON.stringify(obj))));
+    const daten = new Uint8Array(iv.length + ct.length); daten.set(iv); daten.set(ct, iv.length);
+    const mkey = await crypto.subtle.importKey("raw", mk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    return { iv: zuB64(iv), ct: zuB64(ct), mac: zuB64(new Uint8Array(await crypto.subtle.sign("HMAC", mkey, daten))) };
+  }
+  function setzeHaken(h, text, an) {
+    const st = hakenStand();
+    if (an) st[h] = { ts: Date.now() }; else delete st[h];
+    lsSet(HAKEN, JSON.stringify(st));
+    const q = (lies(SCHLANGE) || []).filter(x => x.h !== h);
+    q.push({ a: an ? "erledigt" : "offen", h: h, t: String(text).slice(0, 200), ts: Date.now() });
+    lsSet(SCHLANGE, JSON.stringify(q));
+    zeichneKalender(); sendeHaken();
+  }
+  let sendetGerade = false;
+  async function sendeHaken() {
+    const k = lsGet(KEY), q = lies(SCHLANGE) || [];
+    if (sendetGerade || !q.length || !k || !window.crypto || !crypto.subtle) { hakenInfo(); return; }
+    sendetGerade = true;
+    try {
+      const { thema } = await schluesselTeile(k);
+      while (true) {
+        const offen = lies(SCHLANGE) || [];
+        if (!offen.length) break;
+        const r = await fetch("https://ntfy.sh/" + thema, { method: "POST", body: JSON.stringify(await verschluessle(offen[0], k)) });
+        if (!r.ok) break;
+        lsSet(SCHLANGE, JSON.stringify((lies(SCHLANGE) || []).filter(x => !(x.h === offen[0].h && x.ts === offen[0].ts))));
+      }
+    } catch (e) { /* offline, nächster Versuch beim Öffnen oder wenn das Netz zurück ist */ }
+    sendetGerade = false; hakenInfo();
+  }
+  function hakenInfo() {
+    const el = $("k-todos-sync"); if (!el) return;
+    const q = (lies(SCHLANGE) || []).length, n = Object.keys(hakenStand()).length;
+    el.textContent = q ? q + (q === 1 ? " Haken wartet" : " Haken warten") + " auf Verbindung" : n ? "Abgehakt. OneNote ist in etwa einer Minute aktuell, die App nach dem nächsten Abgleich." : "";
+  }
+  window.addEventListener("online", sendeHaken);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) sendeHaken(); });
 
   // ---------- Zeitung ----------
   async function ladeZeitung(datei) {
@@ -437,7 +499,7 @@ html.laptop .reihe.drei { max-width: 460px; }
     }
     privat = null;
     await entsperren();
-    zeichneZeitung(); zeichneZeitungKarte();
+    zeichneZeitung(); zeichneZeitungKarte(); sendeHaken();
     if (!datei) {
       $("z-archiv").innerHTML = (zeitung.archiv || []).map(a => '<option value="ausgabe-' + a.ausgabe + '.json">Ausgabe ' + a.ausgabe + ", " + esc(a.titel || a.datum.split("-").reverse().join(".")) + "</option>").join("");
     }
