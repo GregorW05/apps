@@ -77,6 +77,8 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .pille.ueber { background: rgba(179, 38, 58, .13); color: var(--rot); }
+.prio1 { background: color-mix(in srgb, var(--rot) 9%, transparent); border: 1px solid color-mix(in srgb, var(--rot) 28%, transparent); border-radius: 10px; padding: 6px 10px 2px; margin: 0 0 10px; }
+.prio1-titel { margin: 2px 0 4px; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--rot); }
 .eintrag.todo p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
 .eintrag.todo.voll p { display: block; -webkit-line-clamp: unset; }
 .eintrag.todo { grid-template-columns: auto auto 1fr; }
@@ -465,11 +467,14 @@ html.laptop .reihe.drei { max-width: 460px; }
     const hk = hakenStand(), daHs = td.map(x => x.h).filter(Boolean), om = offenMerk(), voll = sitz.get("wv-voll") || [];
     if (Object.keys(hk).some(h => !daHs.includes(h))) { Object.keys(hk).forEach(h => { if (!daHs.includes(h)) delete hk[h]; }); lsSet(HAKEN, JSON.stringify(hk)); }
     const tdZeile = x => { const u = x.f && x.f < tag, j = x.f === tag, an = !!(x.h && hk[x.h]); return '<div class="eintrag todo' + (an ? " erledigt" : "") + (x.h && voll.includes(x.h) ? " voll" : "") + '"' + (x.h ? ' data-h="' + esc(x.h) + '"' : "") + '>' + (x.h ? '<button type="button" class="haken" data-h="' + esc(x.h) + '" aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + "</button>" : "<span></span>") + '<span class="pille ' + (u ? "ueber" : j ? "neu" : "offen") + '">' + esc(u ? "seit " + x.d : j ? "heute" : x.d ? "bis " + x.d : "offen") + "</span><p>" + esc(x.t) + "</p></div>"; };
-    const sicht = td.filter(x => x.f && x.f <= tag).slice(0, 4), rest = td.filter(x => !sicht.includes(x));
+    // Prio 1 (in OneNote "1!", seit 15.11.2026): sehr wichtig und zeitkritisch, eigener roter Block ganz oben
+    const krit = td.filter(x => x.k), normal = td.filter(x => !x.k);
+    const sicht = normal.filter(x => x.f && x.f <= tag).slice(0, 4), rest = normal.filter(x => !sicht.includes(x));
     const offenTd = td.filter(x => !(x.h && hk[x.h]));
     const ueber = offenTd.filter(x => x.f && x.f < tag).length, anzahl = offenTd.length + kalTodo.length;
     ti.textContent = anzahl ? anzahl + " offen" + (ueber ? ", " + ueber + " überfällig" : "") : "";
     tb.innerHTML = (neu.length + kalTodo.length + td.length ? "" : '<p class="zeile">Nichts offen.</p>') +
+      (krit.length ? '<div class="prio1"><p class="prio1-titel">Prio 1, wichtig und zeitkritisch</p>' + krit.map(tdZeile).join("") + "</div>" : "") +
       neu.map(zeile).join("") + kalTodo.map(zeile).join("") + sicht.map(tdZeile).join("") +
       (rest.length ? '<details class="mehr" data-merk="todos-weitere"' + (om["todos-weitere"] ? " open" : "") + '><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
       (warten.length ? '<details class="mehr" data-merk="todos-warten"' + (om["todos-warten"] ? " open" : "") + '><summary>Warten auf Antwort (' + warten.length + ")</summary><div class=\"liste-innen\">" + warten.map(zeile).join("") + "</div></details>" : "") +
