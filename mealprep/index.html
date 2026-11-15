@@ -225,6 +225,12 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --surface: #0E2336; --ink: 
   const shopPos = r => { const i = SHOP_ORDER.indexOf(r.key.slice(r.key.indexOf("-") + 1)); return i < 0 ? 999 : i; };
   const WD = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const BATCH = 4; // ein Gericht wird immer für 4 Portionen gekocht, das sind genau ganze Packungen
+  // Sonstiges: Artikel außerhalb der Rezepte, die Gregor auf die Liste setzen lässt (seit 15.11.2026).
+  // Jeder neue Eintrag bekommt das Datum in den Schlüssel, damit ein alter Haken ihn nicht versteckt.
+  // Der Block steht unten in der Liste, bis alles darin abgehakt ist. Erledigte Einträge dürfen hier gelöscht werden.
+  const EXTRA = [
+    { id: "20261115-klopapier", n: "Toilettenpapier", q: "", h: "Drogerie" }
+  ];
 
   /* PACKUNGEN-START */
   // Artikel: n Name auf der Liste, c Name im Rezept, a Bereich, u Einheit im Rezept.
@@ -595,19 +601,23 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --surface: #0E2336; --ink: 
   }
 
   // Die Küchenliste steht unten im Einkauf, bis alles abgehakt ist.
-  let kitShown = false;
+  let kitShown = false, extraShown = false;
+  function extraRows() { return EXTRA.map(x => ({ key: "x-" + x.id, name: x.n, qty: x.q || "", hint: "", src: x.h || "" })); }
   function renderList() {
     const rows = currentRows();
     const kit = kitRows();
+    const extra = extraRows();
     kitShown = kit.length > 0 && kit.some(r => !state.checked[r.key]);
+    extraShown = extra.some(r => !state.checked[r.key]);
     let html = "", kitHtml = "";
+    const extraHtml = extraShown ? '<div class="area"><div class="label">Sonstiges</div>' + extra.map(rowHtml).join("") + "</div>" : "";
     if (kitShown) {
       kitHtml = '<div class="area kit"><div class="label">Küche, einmalig</div>' +
         '<p class="kitnote">Schon da: ' + HAVE + ".</p>" + kit.map(rowHtml).join("") +
         '<p class="kitnote">Die Gerichte nacheinander im großen Topf kochen, Reis im kleinen Topf. Küchenzeug hat am ehesten ein Interspar, sonst Haushaltsgeschäft oder Ikea.</p></div>';
     }
     if (!rows.length) {
-      html += '<p class="empty">Nichts zu kaufen. Stell oben Tage und Gerichte ein.</p>';
+      if (!extraShown) html += '<p class="empty">Nichts zu kaufen. Stell oben Tage und Gerichte ein.</p>';
     } else {
       AREAS.forEach((area, ai) => {
         const rs = rows.filter(r => r.area === ai).sort((x, y) => shopPos(x) - shopPos(y));
@@ -615,12 +625,12 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --surface: #0E2336; --ink: 
         html += '<div class="area"><div class="label">' + area + "</div>" + rs.map(rowHtml).join("") + "</div>";
       });
     }
-    $("list").innerHTML = html + kitHtml;
+    $("list").innerHTML = html + extraHtml + kitHtml;
     renderProgress();
   }
 
   function renderProgress() {
-    const rows = currentRows().concat(kitShown ? kitRows() : []);
+    const rows = currentRows().concat(extraShown ? extraRows() : [], kitShown ? kitRows() : []);
     const done = rows.filter(r => state.checked[r.key]).length;
     $("prog").textContent = rows.length ? done + " von " + rows.length + " im Wagen" : "";
     $("barFill").style.width = rows.length ? (100 * done / rows.length) + "%" : "0";
