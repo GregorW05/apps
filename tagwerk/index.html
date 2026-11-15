@@ -70,6 +70,9 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .karte.kalender { --akzent: var(--lernen); --soft: var(--lernen-soft); --leiste-farbe: var(--ozean); }
 .karte.spiel { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
 .liste { display: grid; gap: 10px; }
+.reihe.drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.reihe.drei .knopf { justify-self: stretch; padding: 0 4px; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.karte.todos { --akzent: var(--zeitung); --soft: var(--zeitung-soft); --leiste-farbe: var(--navy); }
 .liste h3.gruppe { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
@@ -165,7 +168,7 @@ details.einst[open] summary::after { content: "−"; }
 .einst-inhalt { padding: 0 16px 16px; display: grid; gap: 18px; }
 .einst-inhalt h3 { margin: 0 0 4px; font-size: 1rem; }
 .einst-inhalt p { margin: 0 0 8px; color: var(--muted); font-size: .92rem; }
-input[type="text"], textarea, select { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 44px; }
+input[type="text"], input[type="password"], textarea, select { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 44px; }
 textarea { min-height: 96px; font-size: .85rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
 .reihe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .meldung-status { margin: 6px 0 0; font-size: .9rem; color: var(--muted); min-height: 1.3em; }
@@ -222,12 +225,17 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   <section class="karte zeitung" aria-labelledby="k-zeitung">
     <h2 id="k-zeitung">Zeitung <span id="k-zeitung-nr"></span></h2>
     <ul class="schlagzeilen" id="k-schlagzeilen"><li>Lädt die Ausgabe</li></ul>
-    <div class="reihe"><a class="knopf" href="#zeitung">Zeitung lesen</a><button class="knopf leise" type="button" id="k-anhoeren">Anhören</button><a class="knopf leise" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen</a></div>
+    <div class="reihe drei"><a class="knopf" href="#zeitung">Zeitung lesen</a><button class="knopf leise" type="button" id="k-anhoeren">Anhören</button><a class="knopf leise" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen</a></div>
   </section>
 
   <section class="karte kalender" aria-labelledby="k-kalender">
-    <h2 id="k-kalender">Termine und To-dos <span id="k-kalender-info"></span></h2>
+    <h2 id="k-kalender">Kalender <span id="k-kalender-info"></span></h2>
     <div class="liste" id="k-termine"><p class="zeile">Lädt</p></div>
+  </section>
+
+  <section class="karte todos" aria-labelledby="k-todos-titel">
+    <h2 id="k-todos-titel">To-dos <span id="k-todos-info"></span></h2>
+    <div class="liste" id="k-todos"><p class="zeile">Lädt</p></div>
   </section>
 
   <section class="karte spiel" aria-labelledby="k-spiel">
@@ -240,9 +248,12 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     <div class="einst-inhalt">
       <div>
         <h3>Schlüssel für deinen persönlichen Teil</h3>
-        <p>Einmal pro Gerät eingeben oder die App über deinen persönlichen Link öffnen. Ohne Schlüssel siehst du nur Meldungen und Wetter.</p>
-        <input type="text" id="schluessel" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH IJKL …" aria-label="Schlüssel">
-        <div class="reihe"><button class="knopf" type="button" id="schluessel-speichern" style="--akzent:var(--brand)">Schlüssel speichern</button><button class="knopf leise" type="button" id="schluessel-weg">Schlüssel entfernen</button></div>
+        <p>Kopier in OneDrive die Datei „Link Wieser Ventures App mit Schlüssel“ und tippe „Aus Zwischenablage“. Das iPhone bietet an, den Schlüssel im Schlüsselbund zu sichern, dann füllt es ihn künftig selbst aus. Ohne Schlüssel siehst du nur Meldungen und Wetter.</p>
+        <form id="schluessel-form" onsubmit="return false">
+          <input type="text" name="username" autocomplete="username" value="Wieser Ventures Zeitung" readonly tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
+          <input type="password" id="schluessel" name="password" autocomplete="current-password" autocapitalize="characters" spellcheck="false" placeholder="Schlüssel oder persönlichen Link einfügen" aria-label="Schlüssel">
+          <div class="reihe"><button class="knopf" type="submit" id="schluessel-speichern" style="--akzent:var(--brand)">Speichern</button><button class="knopf leise" type="button" id="schluessel-einfuegen">Aus Zwischenablage</button><button class="knopf leise" type="button" id="schluessel-weg">Entfernen</button></div>
+        </form>
         <p class="meldung-status" id="schluessel-status" role="status"></p>
       </div>
       <div>
@@ -352,33 +363,39 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     zeichneKalender();
   }
   // Kalender: Termine, neue Antworten und offene Punkte aus dem verschlüsselten Teil (Routine aktualisiert alle 3 Stunden)
+  // Seit 15.11.2026 getrennt: Kalender = echte Termine, To-dos = OneNote-Liste, Aufgaben aus dem Kalender, neue Antworten, Warten auf Antwort
   function zeichneKalender() {
-    const box = $("k-termine"), info = $("k-kalender-info");
+    const kb = $("k-termine"), tb = $("k-todos"), ki = $("k-kalender-info"), ti = $("k-todos-info");
     if (!zeitung) return;
     if (!privat) {
-      info.textContent = "";
-      box.innerHTML = '<p class="zeile">' + (lsGet(KEY) === null ? "Gesperrt. Öffne die App einmal über deinen persönlichen Link oder gib den Schlüssel unter Einstellungen ein." : "Der gespeicherte Schlüssel passt nicht zu dieser Ausgabe.") + "</p>";
+      ki.textContent = ""; ti.textContent = "";
+      kb.innerHTML = tb.innerHTML = '<p class="zeile">' + (lsGet(KEY) === null ? "Gesperrt. Öffne die App über deinen persönlichen Link oder füge den Schlüssel unter Einstellungen ein." : "Der gespeicherte Schlüssel passt nicht zu dieser Ausgabe.") + "</p>";
       return;
     }
     // Labels kommen englisch aus der Zeitung, auf der Startseite deutsch
-    const de = l => String(l || "").replace(/^Tomorrow\b/i, "Morgen").replace(/^Today\b/i, "Heute").replace(/^Open$/i, "Offen").replace(/^New reply$/i, "Neu").replace(/^New$/i, "Neu").replace(/^Appointment$/i, "Termin");
+    const de = l => String(l || "").replace(/^Tomorrow\b/i, "Morgen").replace(/^Today\b/i, "Heute").replace(/^All day$/i, "Ganztägig").replace(/^Open$/i, "Offen").replace(/^New reply$/i, "Neu").replace(/^New$/i, "Neu").replace(/^Appointment$/i, "Termin");
     const zeile = x => '<div class="eintrag"><span class="pille ' + esc(x.art) + '">' + esc(de(x.label)) + "</span><p>" + (x.wer ? "<b>" + esc(x.wer) + "</b> " : "") + esc(x.text) + "</p></div>";
-    const termine = privat.eintraege.filter(x => x.art === "termin");
-    // To-dos seit 15.11.2026 aus Gregors OneNote-Liste (export_app.py), überfällige und heutige oben, der Rest ausklappbar
-    const neu = privat.eintraege.filter(x => x.art === "neu"), warten = privat.eintraege.filter(x => x.art !== "termin" && x.art !== "neu");
+    // Aufgaben, die im Kalender stehen (prüfen, einreichen, zahlen, Platzhalter), sind keine Termine
+    const aufgabe = x => /\b(check|checken|prüfen|pruefen|review|submit|einreichen|erledigen|to-?do|platzhalter|placeholder|reminder|erinnerung|bezahlen|zahlen|pay)\b/i.test((x.wer || "") + " " + (x.text || ""));
+    const istTodo = x => (x.art === "termin" && aufgabe(x)) || (x.art === "offen" && /^to-?do$/i.test(x.label || ""));
+    const termine = privat.eintraege.filter(x => x.art === "termin" && !istTodo(x));
+    const kalTodo = privat.eintraege.filter(istTodo).map(x => Object.assign({}, x, { art: "offen", label: x.art === "termin" ? de(x.label) : "To-do" }));
+    const neu = privat.eintraege.filter(x => x.art === "neu"), warten = privat.eintraege.filter(x => x.art === "offen" && !istTodo(x));
+    const stand = zeitung.erstellt ? new Date(zeitung.erstellt) : null;
+    ki.textContent = termine.length ? termine.length + (termine.length === 1 ? " Termin" : " Termine") : "keine Termine";
+    kb.innerHTML = (termine.length ? termine.map(zeile).join("") : '<p class="zeile">Heute keine Termine.</p>') +
+      (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
+    // To-dos aus Gregors OneNote-Liste (export_app.py), überfällige und heutige oben, der Rest ausklappbar
     const td = Array.isArray(privat.todos) ? privat.todos : [], tag = heuteISO();
     const tdZeile = x => { const u = x.f && x.f < tag, j = x.f === tag; return '<div class="eintrag todo"><span class="pille ' + (u ? "ueber" : j ? "neu" : "offen") + '">' + esc(u ? "seit " + x.d : j ? "heute" : x.d ? "bis " + x.d : "offen") + "</span><p>" + esc(x.t) + "</p></div>"; };
     const sicht = td.filter(x => x.f && x.f <= tag).slice(0, 4), rest = td.filter(x => !sicht.includes(x));
-    const ueber = td.filter(x => x.f && x.f < tag).length;
-    info.textContent = termine.length + (termine.length === 1 ? " Termin" : " Termine") + " · " + (td.length || neu.length) + " To-dos";
-    const stand = zeitung.erstellt ? new Date(zeitung.erstellt) : null;
-    box.innerHTML = '<h3 class="gruppe">Termine</h3>' + (termine.length ? termine.map(zeile).join("") : '<p class="zeile">Heute keine Termine.</p>') +
-      (neu.length || td.length ? '<h3 class="gruppe">To-dos' + (td.length ? "<span>" + td.length + " offen" + (ueber ? ", " + ueber + " überfällig" : "") + "</span>" : "") + "</h3>" : "") +
-      neu.map(zeile).join("") + sicht.map(tdZeile).join("") +
-      (rest.length ? '<details class="mehr"><summary>' + (sicht.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
-      (warten.length ? '<details class="mehr"><summary>Warten auf Antwort (' + warten.length + ")</summary><div class=\"liste-innen\">" + warten.map(zeile).join("") + "</div></details>" : "") +
-      (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
-    box.querySelectorAll(".eintrag.todo p").forEach(x => x.onclick = () => x.parentElement.classList.toggle("voll"));
+    const ueber = td.filter(x => x.f && x.f < tag).length, anzahl = td.length + kalTodo.length;
+    ti.textContent = anzahl ? anzahl + " offen" + (ueber ? ", " + ueber + " überfällig" : "") : "";
+    tb.innerHTML = (neu.length + kalTodo.length + td.length ? "" : '<p class="zeile">Nichts offen.</p>') +
+      neu.map(zeile).join("") + kalTodo.map(zeile).join("") + sicht.map(tdZeile).join("") +
+      (rest.length ? '<details class="mehr"><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
+      (warten.length ? '<details class="mehr"><summary>Warten auf Antwort (' + warten.length + ")</summary><div class=\"liste-innen\">" + warten.map(zeile).join("") + "</div></details>" : "");
+    tb.querySelectorAll(".eintrag.todo p").forEach(x => x.onclick = () => x.parentElement.classList.toggle("voll"));
   }
 
   // ---------- Zeitung ----------
@@ -448,7 +465,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     try { privat = await entschluessle(zeitung.privat, k); return true; } catch (e) { privat = null; return false; }
   }
   $("schluessel-speichern").onclick = async () => {
-    const k = $("schluessel").value.trim();
+    const roh = $("schluessel").value.trim(), ausLink = roh.match(/[?&]k=([A-Za-z2-7]+)/), k = ausLink ? ausLink[1] : roh;
     if (k.replace(/[^A-Za-z2-7]/g, "").length < 20) { $("schluessel-status").textContent = "Der Schlüssel ist zu kurz."; return; }
     if (zeitung && zeitung.privat) {
       try { privat = await entschluessle(zeitung.privat, k); } catch (e) { $("schluessel-status").textContent = "Der Schlüssel passt nicht. Bitte noch einmal prüfen."; return; }
@@ -456,6 +473,10 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     lsSet(KEY, k); $("schluessel").value = ""; if (!alleinstehend()) adresse(k);
     $("schluessel-status").textContent = "Gespeichert. Dein persönlicher Teil ist jetzt sichtbar.";
     zeichneZeitung(); zeichneZeitungKarte();
+  };
+  $("schluessel-einfuegen").onclick = async () => {
+    try { $("schluessel").value = (await navigator.clipboard.readText()).trim(); $("schluessel-speichern").click(); }
+    catch (e) { $("schluessel-status").textContent = "Einfügen ging nicht. Halte das Feld gedrückt, wähle Einsetzen und dann Speichern."; }
   };
   $("schluessel-weg").onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} adresse(null); privat = null; $("schluessel-status").textContent = "Schlüssel von diesem Gerät entfernt."; if (zeitung) { zeichneZeitung(); zeichneZeitungKarte(); } };
 
