@@ -67,6 +67,56 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .karte.zeitung { --akzent: var(--zeitung); --soft: var(--zeitung-soft); --leiste-farbe: var(--petrol); }
 .karte.lernen { --akzent: var(--lernen); --soft: var(--lernen-soft); --leiste-farbe: var(--ozean); }
 .karte.essen { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
+.karte.kalender { --akzent: var(--lernen); --soft: var(--lernen-soft); --leiste-farbe: var(--ozean); }
+.karte.spiel { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
+.liste { display: grid; gap: 10px; }
+/* Rätsel des Tages */
+#spiel, .sp { display: grid; gap: 10px; min-width: 0; }
+.sp-text { margin: 0; font-size: .97rem; }
+.sp-meta { margin: 0; color: var(--muted); font-size: .88rem; min-height: 1.2em; }
+.sp-ok { margin: 0; font-weight: 700; color: var(--hl); }
+.sp-ziel { margin: 0; font-size: 1rem; color: var(--muted); } .sp-ziel b { font-size: 2.2rem; color: var(--ink); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.brett { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; max-width: 380px; justify-self: center; border: 2px solid var(--navy); border-radius: 3px; overflow: hidden; }
+.brett button { aspect-ratio: 1; border: 0; padding: 0; margin: 0; display: grid; place-items: center; font-size: clamp(22px, 8.6vw, 38px); line-height: 1; color: #0E2841; background: #E6EEF3; cursor: pointer; font-family: "Apple Symbols", "Segoe UI Symbol", "DejaVu Sans", sans-serif; }
+.brett button.d { background: #8DB3C9; }
+.brett button.sel { box-shadow: inset 0 0 0 3px var(--cyan); }
+.brett button.zuletzt { background-image: linear-gradient(rgba(15, 161, 219, .38), rgba(15, 161, 219, .38)); }
+.brett button.ziel { background-image: radial-gradient(circle, rgba(8, 79, 106, .55) 17%, transparent 19%); }
+.kacheln { display: flex; flex-wrap: wrap; gap: 8px; }
+.kachel { min-width: 58px; min-height: 48px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; cursor: pointer; }
+.kachel.sel { background: var(--petrol); border-color: var(--petrol); color: #fff; }
+.kachel.treffer { background: var(--cyan); border-color: var(--cyan); color: var(--navy); }
+.ops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ops button, .ziffern button { min-height: 46px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 1.3rem; font-weight: 700; cursor: pointer; }
+.ops button.an { background: var(--ozean); border-color: var(--ozean); color: #fff; }
+.sudoku { display: grid; grid-template-columns: repeat(6, 1fr); width: 100%; max-width: 340px; justify-self: center; border: 2px solid var(--navy); }
+.sudoku button { aspect-ratio: 1; border: 1px solid var(--line); background: var(--surface); color: var(--ozean); font: inherit; font-size: 1.35rem; font-weight: 600; padding: 0; cursor: pointer; }
+.sudoku button.fix { color: var(--ink); font-weight: 800; background: var(--surface-2); cursor: default; }
+.sudoku button.rk { border-right: 2px solid var(--navy); } .sudoku button.uk { border-bottom: 2px solid var(--navy); }
+.sudoku button.sel { box-shadow: inset 0 0 0 3px var(--cyan); }
+.sudoku button.fehler { color: #B3263A; }
+.ziffern { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; max-width: 380px; }
+.wahl4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wahl4 button { min-height: 50px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; padding: 6px; }
+.wahl4 button.richtig { background: var(--petrol); border-color: var(--petrol); color: #fff; }
+.wahl4 button.falsch { background: #B3263A; border-color: #B3263A; color: #fff; }
+/* Vorlesen */
+.vorlesen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.zt .fussleiste { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.anhoeren { min-height: 44px; border: 0; background: none; color: var(--hl); font: inherit; font-size: .9rem; font-weight: 600; padding: 0; cursor: pointer; }
+/* Einklappen (seit 15.11.2026): zu zeigt Überschrift und Anriss, auf den ganzen Bericht */
+.zt article .kopfzeile { all: unset; display: block; cursor: pointer; padding-right: 30px; position: relative; -webkit-tap-highlight-color: transparent; }
+.zt article .kopfzeile::after { content: "+"; position: absolute; right: 2px; top: -2px; color: var(--muted); font-weight: 400; font-size: 1.5rem; line-height: 1; }
+.zt article.auf .kopfzeile::after { content: "−"; }
+.zt article .kopfzeile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
+.zt article.zu .koerper, .zt article.auf .anriss { display: none; }
+.zt .koerper { display: grid; gap: 10px; }
+.zt .anriss { margin: 0; color: var(--muted); font-size: .95rem; }
+.zt article.gelesen.zu .kopfzeile { color: var(--muted); }
+.zt article.gelesen .kopfzeile::before { content: "✓ "; color: var(--hl); font-weight: 700; }
+.zt article.zu { padding-bottom: 12px; gap: 6px; }
+.zuklappen { min-height: 44px; border: 0; background: none; color: var(--muted); font: inherit; font-size: .9rem; font-weight: 600; padding: 0; cursor: pointer; }
+.zt article.liest { background: var(--zeitung-soft); box-shadow: 0 0 0 8px var(--zeitung-soft); border-radius: 2px; }
 .karte h2 { margin: 0 -16px 4px; padding: 10px 16px; background: var(--leiste-farbe); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .karte h2 span { color: rgba(255, 255, 255, .85); font-weight: 600; letter-spacing: .02em; text-transform: none; font-size: .85rem; }
 .schlagzeilen { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 1.05rem; font-weight: 600; line-height: 1.32; }
@@ -149,23 +199,17 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   <section class="karte zeitung" aria-labelledby="k-zeitung">
     <h2 id="k-zeitung">Zeitung <span id="k-zeitung-nr"></span></h2>
     <ul class="schlagzeilen" id="k-schlagzeilen"><li>Lädt die Ausgabe</li></ul>
-    <div class="privat" id="k-privat" hidden></div>
-    <div class="reihe"><a class="knopf" href="#zeitung">Zeitung lesen</a><a class="knopf leise" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen</a></div>
+    <div class="reihe"><a class="knopf" href="#zeitung">Zeitung lesen</a><button class="knopf leise" type="button" id="k-anhoeren">Anhören</button><a class="knopf leise" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen</a></div>
   </section>
 
-  <section class="karte lernen" aria-labelledby="k-lernen">
-    <h2 id="k-lernen">Lernen <span id="k-lernen-bereich"></span></h2>
-    <div class="gross"><b id="k-faellig">…</b><span id="k-faellig-text">Karten fällig</span></div>
-    <p class="zeile" id="k-lernen-zeile"></p>
-    <a class="knopf" href="#lernen">Jetzt lernen</a>
+  <section class="karte kalender" aria-labelledby="k-kalender">
+    <h2 id="k-kalender">Kalender <span id="k-kalender-info"></span></h2>
+    <div class="liste" id="k-termine"><p class="zeile">Lädt</p></div>
   </section>
 
-  <section class="karte essen" aria-labelledby="k-essen">
-    <h2 id="k-essen">Essen <span id="k-essen-tage"></span></h2>
-    <div class="gross"><b id="k-kochtag">…</b><span id="k-kochtag-text"></span></div>
-    <div class="balken" aria-hidden="true"><i id="k-balken" style="width:0"></i></div>
-    <p class="zeile" id="k-essen-zeile"></p>
-    <a class="knopf" href="#essen">Zur Einkaufsliste</a>
+  <section class="karte spiel" aria-labelledby="k-spiel">
+    <h2 id="k-spiel">Rätsel des Tages <span id="k-spiel-art"></span></h2>
+    <div id="spiel"><p class="sp-meta">Lädt</p></div>
   </section>
 
   <details class="einst" id="einst">
@@ -196,6 +240,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     <h1 id="h-zeitung">Morgenzeitung</h1>
     <p class="wetter" id="z-wetter"></p>
   </header>
+  <div class="vorlesen" id="z-vorlesen"><button class="knopf" type="button" id="z-alle">Alles anhören</button><button class="knopf leise" type="button" id="z-pause" hidden>Pause</button><button class="knopf leise" type="button" id="z-stopp" hidden>Stopp</button><button class="knopf leise" type="button" id="z-tempo" aria-label="Lesetempo">1×</button><button class="knopf leise" type="button" id="z-klapp">Alle aufklappen</button></div>
   <section class="persoenlich" id="z-privat" aria-labelledby="z-privat-titel" hidden></section>
   <div class="block" id="z-inhalt"></div>
   <section class="themen" aria-labelledby="z-themen-titel"><h2 id="z-themen-titel">Deine Themen</h2><p id="z-themen">Ab der nächsten Ausgabe wählt die Zeitung danach aus.</p><a class="knopf" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen bewerten, 1 bis 10</a></section>
@@ -214,6 +259,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   <a href="#essen" data-v="essen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 4.5c-.8 1 .8 2 0 3M12.5 4.5c-.8 1 .8 2 0 3M16 4.5c-.8 1 .8 2 0 3"/></svg>Essen</a>
 </div></nav>
 
+<script src="raetsel.js"></script>
 <script>
 (function () {
   "use strict";
@@ -225,7 +271,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   const LERN = "sani-lernkartei-v1", ESSEN = "mp-einkauf-state", KEY = "tagwerk-schluessel";
   const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
-  let zeitung = null, privat = null;
+  let zeitung = null, privat = null, geladenUm = 0;
 
   // ---------- Schlüssel über die Adresse (?k=), seit 15.11.2026 ----------
   // Am iPhone hat jede Homescreen-App ihren eigenen Speicher. Steht der Schlüssel in der Adresse, nimmt "Zum Home-Bildschirm"
@@ -259,7 +305,8 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     document.querySelectorAll("nav.leiste a").forEach(a => { if (a.dataset.v === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     if (v === "lernen" || v === "essen") rahmenLaden(v);
     if (v === "heute") zeichneHeute();
-    if (v === "zeitung" || v === "heute") window.scrollTo(0, 0);
+    if (v === "heute") window.scrollTo(0, 0);
+    if (v === "zeitung") window.scrollTo(0, zeitung ? leseStand(zeitung.ausgabe).y || 0 : 0);
     document.title = v === "heute" ? "Wieser Ventures" : "Wieser Ventures · " + v.charAt(0).toUpperCase() + v.slice(1);
   }
   window.addEventListener("hashchange", zeige);
@@ -270,59 +317,33 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     const jetzt = new Date(), h = jetzt.getHours();
     $("gruss").textContent = h < 11 ? "Guten Morgen" : h < 18 ? "Hallo Gregor" : "Guten Abend";
     $("h-heute").innerHTML = '<span class="hl">' + WT[jetzt.getDay()] + "</span>, " + jetzt.getDate() + ". " + jetzt.toLocaleDateString("de-AT", { month: "long" });
-    // Lernen
-    const lz = lies(LERN + "-zusammenfassung");
-    if (lz && lz.kurse && lz.kurse.length) {
-      const k = lz.kurse.find(x => x.id === lz.bereich) || lz.kurse[0];
-      $("k-faellig").textContent = k.faellig;
-      $("k-faellig-text").textContent = k.faellig === 1 ? "Karte fällig" : "Karten fällig";
-      $("k-lernen-bereich").textContent = k.name;
-      $("k-lernen-zeile").innerHTML = lz.neuHeute ? "Dazu <b>" + lz.neuHeute + " neue</b> für heute." : (k.faellig ? "" : "Für heute ist alles geschafft.");
-    } else {
-      $("k-faellig").textContent = "…"; $("k-lernen-zeile").textContent = "Öffne einmal Lernen, dann steht hier, was fällig ist.";
-    }
-    // Essen
-    const ez = lies("mp-einkauf-zusammenfassung");
-    if (ez && ez.v === 2) {
-      // Seit 14.11.2026 ein Einkauf für frei wählbar viele Tage statt zwei fester Kochtage
-      $("k-kochtag").textContent = ez.tage + (ez.tage === 1 ? " Tag" : " Tage");
-      $("k-kochtag-text").textContent = "Einkauf, reicht bis " + ez.bis + " Mittag";
-      $("k-essen-tage").textContent = ez.gefrierfach ? ez.gefrierfach + (ez.gefrierfach === 1 ? " Box" : " Boxen") + " im Gefrierfach" : "";
-      const drin = ez.gesamt - ez.offen;
-      $("k-balken").style.width = (ez.gesamt ? 100 * drin / ez.gesamt : 0) + "%";
-      $("k-essen-zeile").innerHTML = ez.offen ? "Einkauf: <b>" + ez.offen + " von " + ez.gesamt + "</b> noch offen." : "Alles eingekauft.";
-      zeichneZeitungKarte();
-      return;
-    }
-    const tage = ez && ez.tage && ez.tage.length ? ez.tage : [{ wd: 2, tag: "Dienstag" }, { wd: 5, tag: "Freitag" }];
-    const heuteWt = jetzt.getDay();
-    const naechster = tage.map(t => Object.assign({ abstand: (t.wd - heuteWt + 7) % 7 }, t)).sort((a, b) => a.abstand - b.abstand)[0];
-    $("k-kochtag").textContent = naechster.abstand === 0 ? "Heute" : naechster.abstand === 1 ? "Morgen" : WT[naechster.wd];
-    $("k-kochtag-text").textContent = naechster.abstand > 1 ? "in " + naechster.abstand + " Tagen kochen" : "wird gekocht";
-    $("k-essen-tage").textContent = "Kochtage " + tage.map(t => WT[t.wd].slice(0, 2)).join(" und ");
-    if (ez && naechster.gesamt != null) {
-      const drin = naechster.gesamt - naechster.offen;
-      $("k-balken").style.width = (naechster.gesamt ? 100 * drin / naechster.gesamt : 0) + "%";
-      $("k-essen-zeile").innerHTML = naechster.offen ? "Einkauf: <b>" + naechster.offen + " von " + naechster.gesamt + "</b> noch offen." : "Alles für diesen Kochtag ist eingekauft.";
-    } else {
-      $("k-balken").style.width = "0"; $("k-essen-zeile").textContent = "Öffne einmal Essen, dann steht hier, was noch fehlt.";
-    }
     zeichneZeitungKarte();
+    if (window.WVRaetsel && (!raetselGestartet || WVRaetsel.neuerTag())) { raetselGestartet = true; WVRaetsel.start($("spiel"), $("k-spiel-art")); }
   }
+  let raetselGestartet = false;
   function zeichneZeitungKarte() {
     if (!zeitung) return;
     $("k-zeitung-nr").textContent = "Ausgabe " + zeitung.ausgabe + (zeitung.datum !== heuteISO() ? " vom " + zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + "." : "");
     $("k-schlagzeilen").innerHTML = zeitung.kurz.map(t => "<li>" + esc(t) + "</li>").join("");
     $("wetter-kurz").innerHTML = zeitung.wetter ? "<span>" + esc(zeitung.wetter) + "</span>" + (zeitung.sonne ? "<span>" + esc(zeitung.sonne) + "</span>" : "") : "";
-    const p = $("k-privat");
-    if (privat) {
-      const neu = privat.eintraege.filter(e => e.art === "neu").length;
-      p.innerHTML = "<b>" + privat.anzahl + (privat.anzahl === 1 ? " Punkt" : " Punkte") + " für heute</b>" + (neu ? ", davon " + neu + " neue Antwort" + (neu === 1 ? "" : "en") : "") + ". " + privat.eintraege.slice(0, 2).map(e => esc(e.wer || e.label)).join(", ") + (privat.anzahl > 2 ? " …" : "");
-      p.hidden = false;
-    } else if (lsGet(KEY) === null) {
-      p.innerHTML = "Dein persönlicher Teil ist gesperrt. Schlüssel unten unter Einstellungen eingeben.";
-      p.hidden = false;
-    } else p.hidden = true;
+    zeichneKalender();
+  }
+  // Kalender: Termine, neue Antworten und offene Punkte aus dem verschlüsselten Teil (Routine aktualisiert alle 3 Stunden)
+  function zeichneKalender() {
+    const box = $("k-termine"), info = $("k-kalender-info");
+    if (!zeitung) return;
+    if (!privat) {
+      info.textContent = "";
+      box.innerHTML = '<p class="zeile">' + (lsGet(KEY) === null ? "Gesperrt. Öffne die App einmal über deinen persönlichen Link oder gib den Schlüssel unter Einstellungen ein." : "Der gespeicherte Schlüssel passt nicht zu dieser Ausgabe.") + "</p>";
+      return;
+    }
+    const rang = { termin: 0, neu: 1, offen: 2 };
+    const e = privat.eintraege.slice().sort((a, b) => (a.art in rang ? rang[a.art] : 3) - (b.art in rang ? rang[b.art] : 3));
+    const t = e.filter(x => x.art === "termin").length;
+    info.textContent = t ? t + (t === 1 ? " Termin" : " Termine") : "keine Termine";
+    const stand = zeitung.erstellt ? new Date(zeitung.erstellt) : null;
+    box.innerHTML = (t ? "" : '<p class="zeile">Heute keine Termine.</p>') + e.map(x => '<div class="eintrag"><span class="pille ' + esc(x.art) + '">' + esc(x.label) + "</span><p>" + (x.wer ? "<b>" + esc(x.wer) + "</b> " : "") + esc(x.text) + "</p></div>").join("") +
+      (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
   }
 
   // ---------- Zeitung ----------
@@ -330,7 +351,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     try {
       const r = await fetch("zeitung/" + (datei || "heute.json"), { cache: "no-cache" });
       if (!r.ok) throw new Error(r.status);
-      zeitung = await r.json();
+      zeitung = await r.json(); if (!datei) geladenUm = Date.now();
     } catch (e) {
       if (!zeitung) { $("k-schlagzeilen").innerHTML = "<li>Keine Verbindung. Die Zeitung lädt, sobald du wieder online bist.</li>"; $("z-inhalt").innerHTML = "<p>Keine Verbindung.</p>"; }
       return;
@@ -339,17 +360,30 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     await entsperren();
     zeichneZeitung(); zeichneZeitungKarte();
     if (!datei) {
-      $("z-archiv").innerHTML = (zeitung.archiv || []).map(a => '<option value="ausgabe-' + a.ausgabe + '.json">Ausgabe ' + a.ausgabe + ", " + esc(a.titel || a.datum) + "</option>").join("");
+      $("z-archiv").innerHTML = (zeitung.archiv || []).map(a => '<option value="ausgabe-' + a.ausgabe + '.json">Ausgabe ' + a.ausgabe + ", " + esc(a.titel || a.datum.split("-").reverse().join(".")) + "</option>").join("");
     }
   }
   function zeichneZeitung() {
     const z = zeitung;
-    $("z-eyebrow").textContent = "Ausgabe " + z.ausgabe + " · " + (z.titel || z.datum);
+    $("z-eyebrow").textContent = "Ausgabe " + z.ausgabe + " · " + (z.titel || z.datum.split("-").reverse().join("."));
     $("z-wetter").innerHTML = (z.wetter ? "<span>" + esc(z.wetter) + "</span>" : "") + (z.sonne ? "<span>" + esc(z.sonne) + "</span>" : "");
     const w = privat && privat.warum || {};
-    $("z-inhalt").innerHTML = z.ressorts.map((r, i) => '<h2 class="ressort">' + esc(r.name) + "</h2>" + r.meldungen.map((m, j) =>
-      "<article><h3>" + esc(m.titel) + "</h3>" + String(m.text || "").split(/\n{2,}/).filter(x => x.trim()).map(x => "<p>" + esc(x) + "</p>").join("") + (w[i + "-" + j] ? '<p class="warum">' + esc(w[i + "-" + j]) + "</p>" : "") +
-      (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + "</article>").join("")).join("");
+    const ls = leseStand(z.ausgabe);
+    $("z-inhalt").innerHTML = z.ressorts.map((r, i) => '<h2 class="ressort">' + esc(r.name) + "</h2>" + r.meldungen.map((m, j) => {
+      const id = i + "-" + j, abs = String(m.text || "").split(/\n{2,}/).filter(x => x.trim()), auf = ls.offen.includes(id);
+      const erst = abs[0] || "", k = erst.search(/[.!?]\s/);
+      const anriss = k > 40 && k < 230 ? erst.slice(0, k + 1) : erst.length > 190 ? erst.slice(0, 187).replace(/\s\S*$/, "") + " …" : erst;
+      return '<article data-id="' + id + '" class="' + (auf ? "auf" : "zu") + (ls.gelesen.includes(id) ? " gelesen" : "") + '"><h3><button type="button" class="kopfzeile" aria-expanded="' + auf + '" aria-controls="b-' + id + '">' + esc(m.titel) + "</button></h3>" +
+        '<p class="anriss">' + esc(anriss) + '</p><div class="koerper" id="b-' + id + '">' + abs.map(x => "<p>" + esc(x) + "</p>").join("") + (w[id] ? '<p class="warum">' + esc(w[id]) + "</p>" : "") +
+        '<div class="fussleiste">' + (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + (TTS ? '<button type="button" class="anhoeren" data-id="' + id + '">Ab hier anhören</button>' : "") + '<button type="button" class="zuklappen">Zuklappen</button></div></div></article>';
+    }).join("")).join("");
+    $("z-inhalt").querySelectorAll(".anhoeren").forEach(b => b.onclick = () => vorlesen(b.dataset.id));
+    $("z-inhalt").querySelectorAll("article").forEach(art => {
+      art.querySelector(".kopfzeile").onclick = () => klappe(art, !art.classList.contains("auf"));
+      art.querySelector(".zuklappen").onclick = () => klappe(art, false, true);
+    });
+    klappKnopf();
+    if (!$("v-zeitung").hidden) requestAnimationFrame(() => window.scrollTo(0, ls.y || 0));
     $("z-fuss").textContent = z.fuss || "";
     const th = privat && privat.themen;
     if (th && ((th.oben && th.oben.length) || (th.nie && th.nie.length))) {
@@ -396,6 +430,80 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   };
   $("schluessel-weg").onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} adresse(null); privat = null; $("schluessel-status").textContent = "Schlüssel von diesem Gerät entfernt."; if (zeitung) { zeichneZeitung(); zeichneZeitungKarte(); } };
 
+  // ---------- Lesestand: offene und gelesene Berichte, Scrollposition je Ausgabe (seit 15.11.2026) ----------
+  function leseStand(n) { const st = lies("wv-lesestand"); return st && st.ausgabe === n && Array.isArray(st.offen) ? st : { ausgabe: n, offen: [], gelesen: [], y: 0 }; }
+  function klappe(art, auf, hochScrollen, ohneGelesen) {
+    const st = leseStand(zeitung.ausgabe), id = art.dataset.id;
+    art.classList.toggle("auf", auf); art.classList.toggle("zu", !auf);
+    art.querySelector(".kopfzeile").setAttribute("aria-expanded", String(auf));
+    st.offen = st.offen.filter(x => x !== id);
+    if (auf) { st.offen.push(id); if (!ohneGelesen && !st.gelesen.includes(id)) { st.gelesen.push(id); art.classList.add("gelesen"); } }
+    lsSet("wv-lesestand", JSON.stringify(st));
+    if (!auf && hochScrollen && art.getBoundingClientRect().top < 0) art.scrollIntoView({ block: "start" });
+    klappKnopf();
+  }
+  function klappKnopf() { const zu = document.querySelector("#z-inhalt article.zu"); $("z-klapp").textContent = zu ? "Alle aufklappen" : "Alle zuklappen"; }
+  $("z-klapp").onclick = () => { const arts = [...document.querySelectorAll("#z-inhalt article")], auf = arts.some(a => a.classList.contains("zu")); arts.forEach(a => klappe(a, auf, false, true)); };
+  let scrollUhr = null;
+  window.addEventListener("scroll", () => {
+    if ($("v-zeitung").hidden || !zeitung) return;
+    clearTimeout(scrollUhr);
+    scrollUhr = setTimeout(() => { const st = leseStand(zeitung.ausgabe); st.y = Math.round(window.scrollY); lsSet("wv-lesestand", JSON.stringify(st)); }, 300);
+  }, { passive: true });
+
+  // ---------- Vorlesen mit der Sprachausgabe des Geräts (seit 15.11.2026) ----------
+  // Am iPhone stoppt die Ausgabe, wenn der Bildschirm sperrt oder die App in den Hintergrund geht.
+  const TTS = window.speechSynthesis || null;
+  let lesen = { an: false, pause: false, u: [] };
+  let tempo = Number(lsGet("wv-tempo")) || 1;
+  function stimme() {
+    const v = TTS.getVoices(), gb = v.filter(x => /^en[-_]GB/i.test(x.lang));
+    return gb.find(x => /premium|enhanced|natural|neural/i.test(x.name)) || gb.find(x => /Daniel|Serena|Kate|Arthur|Martha|Sonia|Ryan|Libby|Stephanie/i.test(x.name)) || gb[0] || v.find(x => /^en/i.test(x.lang)) || null;
+  }
+  function artikelTexte() {
+    const w = privat && privat.warum || {}, out = [];
+    zeitung.ressorts.forEach((r, i) => r.meldungen.forEach((m, j) => {
+      const t = [(j === 0 ? r.name + ". " : "") + m.titel + "."].concat(String(m.text || "").split(/\n{2,}/).map(x => x.trim()).filter(Boolean));
+      if (w[i + "-" + j]) t.push(w[i + "-" + j]);
+      out.push({ id: i + "-" + j, t });
+    }));
+    return out;
+  }
+  function markiereArtikel(id) { document.querySelectorAll("#z-inhalt article").forEach(a => { a.classList.toggle("liest", a.dataset.id === id); if (id && a.dataset.id === id && a.classList.contains("zu")) klappe(a, true); }); }
+  function leseLeiste() {
+    $("z-alle").hidden = lesen.an; $("z-pause").hidden = !lesen.an; $("z-stopp").hidden = !lesen.an;
+    $("z-pause").textContent = lesen.pause ? "Weiter" : "Pause";
+    $("k-anhoeren").textContent = lesen.an ? "Stopp" : "Anhören";
+    $("z-tempo").textContent = String(tempo).replace(".", ",") + "×";
+  }
+  function stopp() { if (TTS) TTS.cancel(); lesen = { an: false, pause: false, u: [] }; markiereArtikel(null); leseLeiste(); }
+  function vorlesen(abId) {
+    if (!TTS || !zeitung) return;
+    TTS.cancel();
+    const alle = artikelTexte(); let ab = abId ? alle.findIndex(a => a.id === abId) : 0; if (ab < 0) ab = 0;
+    const liste = alle.slice(ab), v = stimme(), u = [];
+    if (!liste.length) return;
+    liste.forEach((a, k) => a.t.forEach((text, n) => {
+      const x = new SpeechSynthesisUtterance(text);
+      x.lang = v ? v.lang : "en-GB"; if (v) x.voice = v; x.rate = tempo;
+      if (n === 0) x.onstart = () => markiereArtikel(a.id);
+      if (k === liste.length - 1 && n === a.t.length - 1) x.onend = () => { if (lesen.u === u) stopp(); };
+      u.push(x);
+    }));
+    lesen = { an: true, pause: false, u };
+    u.forEach(x => TTS.speak(x));
+    leseLeiste();
+  }
+  if (TTS) {
+    $("z-alle").onclick = () => vorlesen();
+    $("z-stopp").onclick = stopp;
+    $("z-pause").onclick = () => { if (!lesen.an) return; if (lesen.pause) TTS.resume(); else TTS.pause(); lesen.pause = !lesen.pause; leseLeiste(); };
+    $("z-tempo").onclick = () => { const st = [1, 1.15, 1.3, 0.9]; tempo = st[(st.indexOf(tempo) + 1) % st.length] || 1; lsSet("wv-tempo", String(tempo)); leseLeiste(); if (lesen.an) { const a = document.querySelector("#z-inhalt article.liest"); vorlesen(a ? a.dataset.id : undefined); } };
+    $("k-anhoeren").onclick = () => { if (lesen.an) stopp(); else vorlesen(); };
+    TTS.getVoices();
+    leseLeiste();
+  } else { ["z-alle", "z-pause", "z-stopp", "z-tempo", "k-anhoeren"].forEach(x => { $(x).hidden = true; }); }
+
   // ---------- Stand übernehmen (Lernkartei und Meal Prep) ----------
   function rahmenNeu(v) { const f = document.querySelector("#v-" + v + " iframe"); if (f && f.getAttribute("src")) try { f.contentWindow.location.reload(); } catch (e) { f.src = f.dataset.src; } }
   $("import-los").onclick = () => {
@@ -427,7 +535,12 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
 
   // ---------- Start ----------
   window.addEventListener("storage", e => { if (!e.key || /zusammenfassung$/.test(e.key)) zeichneHeute(); });
-  document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("v-heute").hidden) { zeichneHeute(); } });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    // Die Routine erneuert die Zeitung alle 3 Stunden: nach 15 Minuten im Hintergrund neu laden
+    if (Date.now() - geladenUm > 15 * 60000 && $("z-archiv").selectedIndex <= 0) ladeZeitung();
+    if (!$("v-heute").hidden) zeichneHeute();
+  });
   zeige();
   ladeZeitung();
   // Lernen und Essen im Hintergrund vorladen, damit die Zahlen auf der Startseite frisch sind und der Wechsel sofort geht

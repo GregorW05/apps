@@ -124,6 +124,16 @@ nav.tabs button[aria-current="page"] { color: var(--ink); border-top-color: var(
 .bereiche { display: flex; gap: 6px; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
 .bereiche button { flex: 1 1 0; min-width: 0; border: 0; border-radius: 9px; padding: 9px 8px; background: none; font-family: var(--f-display); font-size: 17px; font-weight: 600; letter-spacing: .03em; color: var(--muted); }
 .bereiche button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+/* Bereiche aktiv oder passiv (seit 15.11.2026) */
+.bereiche button.verwalten { flex: 0 0 auto; font-family: var(--f-body); font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--muted); padding: 9px 10px; }
+.bereich-wahl { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+.bereich-wahl[hidden] { display: none; }
+.bereich-wahl p { margin: 0; color: var(--muted); font-size: 14px; }
+#bereich-liste { display: grid; gap: 6px; }
+#bereich-liste button { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+#bereich-liste button b { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+#bereich-liste button[aria-checked="true"] b { color: var(--accent); }
+#bereich-liste button[aria-checked="false"] span { color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) { .karte { animation: rein .18s ease-out; } @keyframes rein { from { transform: translateY(4px); opacity: .6 } to { transform: none; opacity: 1 } } }
 @media (max-width: 380px) { .frage { font-size: 20px; } .bewerten button { font-size: 14px; } }
 /* Eingebettet in Tagwerk: eigene Marke aus, Ansichten oben statt unten, weil Tagwerk unten seine Leiste hat */
@@ -150,6 +160,7 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --panel: #0E2336; --ink: #E
     </div>
   </header>
   <div class="bereiche" id="bereiche" role="group" aria-label="Bereich"></div>
+  <div class="bereich-wahl" id="bereich-wahl" hidden><p>Aktive Bereiche stehen oben zum Lernen. Passive verschwinden aus der Leiste, ihr Fortschritt bleibt gespeichert, und du kannst sie jederzeit wieder einschalten.</p><div id="bereich-liste"></div></div>
 
   <section id="v-lernen" aria-label="Lernen">
     <div style="display:grid;gap:12px">
@@ -336,7 +347,7 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --panel: #0E2336; --ink: #E
     filterZahlen();
     // Kurzfassung für die Startseite von Tagwerk
     try {
-      const z = { stand: Date.now(), bereich: D.id, kurse: ALLE.kurse.map(k => ({ id: k.id, name: k.bereich || k.titel, faellig: k.karten.filter(istFaellig).length, neu: k.karten.filter(istNeu).length })) };
+      const z = { stand: Date.now(), bereich: D.id, kurse: ALLE.kurse.filter(k => !passivListe().includes(k.id)).map(k => ({ id: k.id, name: k.bereich || k.titel, faellig: k.karten.filter(istFaellig).length, neu: k.karten.filter(istNeu).length })) };
       z.neuHeute = Math.max(0, Math.min(alle.filter(istNeu).length, neuProTag() - heuteEingefuehrt()));
       localStorage.setItem(LS + "-zusammenfassung", JSON.stringify(z));
     } catch (e) {}
@@ -443,7 +454,7 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --panel: #0E2336; --ink: #E
     $("kursname").textContent = D.untertitel || D.kurs;
     document.documentElement.lang = D.lang || "de";
     document.querySelectorAll("[data-t]").forEach(e => { e.textContent = T(e.dataset.t); });
-    document.querySelectorAll("#bereiche button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === D.id ? "true" : "false"));
+    document.querySelectorAll("#bereiche button[data-k]").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === D.id ? "true" : "false"));
     try { localStorage.setItem(LS + "-bereich", D.id); } catch (e) {}
     filterFuellen();
     zeichneBlatt();
@@ -451,11 +462,30 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --panel: #0E2336; --ink: #E
   }
 
   prog = lokalLesen();
-  $("bereiche").innerHTML = ALLE.kurse.map(k => '<button type="button" data-k="' + esc(k.id) + '" aria-pressed="false">' + esc(k.bereich || k.titel) + '</button>').join("");
-  $("bereiche").hidden = ALLE.kurse.length < 2;
-  document.querySelectorAll("#bereiche button").forEach(b => b.onclick = () => { if (b.dataset.k !== D.id) { bereich(b.dataset.k); $("modus").value = "heute"; baueQueue(); } });
-  let startBereich = ALLE.kurse[0].id; try { startBereich = localStorage.getItem(LS + "-bereich") || startBereich; } catch (e) {}
+  // Bereiche aktiv oder passiv (seit 15.11.2026, Gregors Wunsch, z. B. HSG-Interview nach der Bewerbung ausblenden).
+  // Passive Bereiche verschwinden aus der Leiste und der Kurzfassung, der Fortschritt bleibt. Gespeichert im Gerät unter LS + "-passiv".
+  function passivListe() { try { const a = JSON.parse(localStorage.getItem(LS + "-passiv") || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function aktiveKurse() { const p = passivListe(), a = ALLE.kurse.filter(k => !p.includes(k.id)); return a.length ? a : ALLE.kurse.slice(0, 1); }
+  function bereicheZeichnen() {
+    const p = passivListe(), offen = !$("bereich-wahl").hidden;
+    $("bereiche").innerHTML = aktiveKurse().map(k => '<button type="button" data-k="' + esc(k.id) + '" aria-pressed="' + (D && k.id === D.id ? "true" : "false") + '">' + esc(k.bereich || k.titel) + '</button>').join("") +
+      '<button type="button" class="verwalten" id="bereiche-verwalten" aria-expanded="' + offen + '" aria-controls="bereich-wahl">Bereiche' + (p.length ? " · " + p.length + " passiv" : "") + '</button>';
+    $("bereiche").hidden = ALLE.kurse.length < 2;
+    document.querySelectorAll("#bereiche button[data-k]").forEach(b => b.onclick = () => { if (b.dataset.k !== D.id) { bereich(b.dataset.k); $("modus").value = "heute"; baueQueue(); } });
+    $("bereiche-verwalten").onclick = () => { $("bereich-wahl").hidden = offen; bereicheZeichnen(); };
+    $("bereich-liste").innerHTML = ALLE.kurse.map(k => { const an = !p.includes(k.id); return '<button type="button" role="switch" data-p="' + esc(k.id) + '" aria-checked="' + an + '"><span>' + esc(k.bereich || k.titel) + '</span><b>' + (an ? "aktiv" : "passiv") + '</b></button>'; }).join("");
+    document.querySelectorAll("#bereich-liste button").forEach(b => b.onclick = () => {
+      const id = b.dataset.p, liste = passivListe(), an = !liste.includes(id);
+      if (an && aktiveKurse().length <= 1) { $("status").textContent = "Mindestens ein Bereich bleibt aktiv."; return; }
+      const neu = an ? liste.concat(id) : liste.filter(x => x !== id);
+      try { localStorage.setItem(LS + "-passiv", JSON.stringify(neu)); } catch (e) {}
+      if (neu.includes(D.id)) { bereich(aktiveKurse()[0].id); $("modus").value = "heute"; baueQueue(); }
+      bereicheZeichnen();
+    });
+  }
+  let startBereich = aktiveKurse()[0].id; try { const sb = localStorage.getItem(LS + "-bereich"); if (sb && aktiveKurse().some(k => k.id === sb)) startBereich = sb; } catch (e) {}
   bereich(startBereich);
+  bereicheZeichnen();
   $("filter").onchange = baueQueue;
   $("modus").onchange = baueQueue;
   document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => ansicht(b.dataset.v));
