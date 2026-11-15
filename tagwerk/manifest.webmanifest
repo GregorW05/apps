@@ -3,11 +3,10 @@
  "name": "Wieser Ventures",
  "short_name": "Wieser Ventures",
  "description": "Zeitung, Lernkartei und Meal Prep in einer App",
- "start_url": "./",
  "scope": "./",
  "display": "standalone",
- "background_color": "#f4f1ea",
- "theme_color": "#f4f1ea",
+ "background_color": "#F3F6F8",
+ "theme_color": "#F3F6F8",
  "lang": "de",
  "icons": [
   {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},

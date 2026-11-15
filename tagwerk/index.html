@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1419" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F3F6F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#071827" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -17,27 +17,29 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32">
 <style>
-/* Tagwerk: ruhige Papierfläche, Daumenleiste unten, jeder Bereich mit eigener Akzentfarbe (Zeitung rot, Lernen gold, Essen grün) */
+/* Wieser Ventures (bis 14.11.2026 Tagwerk). Farben und Stil seit 15.11.2026 nach Gregors Canada-Goose-Präsentation:
+   vier Blautöne (Navy, Petrol, Ozean, Cyan), weiße Flächen, Kästen mit vollfarbiger Kopfleiste, Schlüsselwort im Titel in Cyan, wenig Rundung */
 :root {
-  --bg: #f4f1ea; --surface: #ffffff; --surface-2: #ece7dc; --ink: #17202a; --muted: #5b6570; --line: #e0d9cb;
-  --sun: #e8a93b; --brand: #15212c; --focus: #1d5fd1;
-  --zeitung: #b3343a; --zeitung-soft: #f6e3e4;
-  --lernen: #85590c; --lernen-soft: #f6ead0;
-  --essen: #2b6a4c; --essen-soft: #e1ede5;
-  --leiste: 58px;
+  --navy: #0E2841; --petrol: #084F6A; --ozean: #156082; --cyan: #0FA1DB; --cyan-dunkel: #0A7FB0;
+  --bg: #F3F6F8; --surface: #ffffff; --surface-2: #E6EEF3; --ink: #0E2841; --muted: #4F6575; --line: #D3E0E8;
+  --brand: var(--petrol); --focus: var(--cyan); --hl: #0B93CC; --label: var(--ozean);
+  --heute: var(--cyan);
+  --zeitung: var(--petrol); --zeitung-soft: #E2EEF3;
+  --lernen: var(--ozean); --lernen-soft: #E3EFF6;
+  --essen: var(--cyan-dunkel); --essen-soft: #E1F3FA;
+  --leiste: 58px; --r: 8px;
   --f-text: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
-  --f-zeitung: "Iowan Old Style", "Source Serif 4", Georgia, "Times New Roman", serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0f1419; --surface: #18202a; --surface-2: #202a35; --ink: #e7ebef; --muted: #9ba6b1; --line: #2b3540;
-  --brand: #e7ebef; --focus: #8ab4ff;
-  --zeitung: #f08a86; --zeitung-soft: #3a1f22; --lernen: #e8b04c; --lernen-soft: #3a2f17; --essen: #72c497; --essen-soft: #1d3326;
+  --bg: #071827; --surface: #0E2336; --surface-2: #163049; --ink: #E4EEF4; --muted: #93AABA; --line: #1E3A52;
+  --brand: #E4EEF4; --focus: #4CC3F0; --hl: #4CC3F0; --label: #8CC3E0; --heute: #4CC3F0;
+  --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247;
   color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #0f1419; --surface: #18202a; --surface-2: #202a35; --ink: #e7ebef; --muted: #9ba6b1; --line: #2b3540;
-  --brand: #e7ebef; --focus: #8ab4ff;
-  --zeitung: #f08a86; --zeitung-soft: #3a1f22; --lernen: #e8b04c; --lernen-soft: #3a2f17; --essen: #72c497; --essen-soft: #1d3326;
+  --bg: #071827; --surface: #0E2336; --surface-2: #163049; --ink: #E4EEF4; --muted: #93AABA; --line: #1E3A52;
+  --brand: #E4EEF4; --focus: #4CC3F0; --hl: #4CC3F0; --label: #8CC3E0; --heute: #4CC3F0;
+  --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247;
   color-scheme: dark }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -46,42 +48,43 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 /* iPhone: Schrift wächst mit der Systemeinstellung (Dynamic Type) */
 @supports (font: -apple-system-body) { html { font: -apple-system-body; } body { font-size: 1rem; } }
 a { color: inherit; }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .ansicht { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: calc(20px + env(safe-area-inset-top, 0px)) calc(var(--leiste) + 28px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; }
 .rahmen { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px); bottom: calc(var(--leiste) + env(safe-area-inset-bottom, 0px)); }
 .rahmen iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
 .laedt { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .95rem; pointer-events: none; }
 
-/* Kopf */
-.eyebrow { margin: 0; font-size: .8rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+/* Kopf: Titel in Navy, Schlüsselwort in Cyan wie die Folientitel */
+.eyebrow { margin: 0; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
+h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; font-weight: 700; }
+.hl { color: var(--hl); }
 .wetter { margin: 6px 0 0; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .wetter b { color: var(--ink); font-weight: 600; }
 
-/* Karten der Startseite */
-.karte { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 16px 14px; border-top: 4px solid var(--akzent); min-width: 0; }
-.karte.zeitung { --akzent: var(--zeitung); --soft: var(--zeitung-soft); }
-.karte.lernen { --akzent: var(--lernen); --soft: var(--lernen-soft); }
-.karte.essen { --akzent: var(--essen); --soft: var(--essen-soft); }
-.karte h2 { margin: 0; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--akzent); display: flex; justify-content: space-between; gap: 8px; }
-.karte h2 span { color: var(--muted); font-weight: 600; letter-spacing: .02em; text-transform: none; font-size: .85rem; }
-.schlagzeilen { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-family: var(--f-zeitung); font-size: 1.12rem; line-height: 1.3; }
-.schlagzeilen li { padding-left: 14px; position: relative; text-wrap: pretty; }
-.schlagzeilen li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--akzent); }
+/* Karten der Startseite: Kasten mit vollfarbiger Kopfleiste */
+.karte { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 0 16px 16px; min-width: 0; overflow: hidden; }
+.karte.zeitung { --akzent: var(--zeitung); --soft: var(--zeitung-soft); --leiste-farbe: var(--petrol); }
+.karte.lernen { --akzent: var(--lernen); --soft: var(--lernen-soft); --leiste-farbe: var(--ozean); }
+.karte.essen { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
+.karte h2 { margin: 0 -16px 4px; padding: 10px 16px; background: var(--leiste-farbe); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.karte h2 span { color: rgba(255, 255, 255, .85); font-weight: 600; letter-spacing: .02em; text-transform: none; font-size: .85rem; }
+.schlagzeilen { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 1.05rem; font-weight: 600; line-height: 1.32; }
+.schlagzeilen li { padding-left: 16px; position: relative; text-wrap: pretty; }
+.schlagzeilen li::before { content: ""; position: absolute; left: 0; top: .5em; width: 7px; height: 7px; background: var(--cyan); }
 .gross { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.gross b { font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.gross b { font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--akzent); }
 .gross span { color: var(--muted); }
 .zeile { margin: 0; color: var(--muted); font-size: .95rem; }
 .zeile b { color: var(--ink); font-weight: 600; }
-.balken { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
-.balken i { display: block; height: 100%; background: var(--akzent); border-radius: 4px; transition: width .3s; }
-.knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 22px; border: 0; background: var(--akzent, var(--brand)); color: var(--surface); font: inherit; font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; justify-self: start; }
+.balken { height: 8px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.balken i { display: block; height: 100%; background: var(--cyan); border-radius: 2px; transition: width .3s; }
+.knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 6px; border: 0; background: var(--akzent, var(--brand)); color: var(--surface); font: inherit; font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; justify-self: start; }
 .knopf.leise { background: var(--surface-2); color: var(--ink); }
-.privat { background: var(--soft, var(--surface-2)); border-radius: 12px; padding: 10px 12px; font-size: .95rem; }
+.privat { background: var(--soft, var(--surface-2)); border-left: 3px solid var(--cyan); border-radius: 4px; padding: 10px 12px; font-size: .95rem; }
 
 /* Einstellungen */
-details.einst { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+details.einst { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
 details.einst summary { min-height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-weight: 600; list-style: none; }
 details.einst summary::-webkit-details-marker { display: none; }
 details.einst summary::after { content: "+"; font-size: 1.4rem; color: var(--muted); }
@@ -89,34 +92,34 @@ details.einst[open] summary::after { content: "−"; }
 .einst-inhalt { padding: 0 16px 16px; display: grid; gap: 18px; }
 .einst-inhalt h3 { margin: 0 0 4px; font-size: 1rem; }
 .einst-inhalt p { margin: 0 0 8px; color: var(--muted); font-size: .92rem; }
-input[type="text"], textarea, select { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; }
+input[type="text"], textarea, select { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 44px; }
 textarea { min-height: 96px; font-size: .85rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
 .reihe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .meldung-status { margin: 6px 0 0; font-size: .9rem; color: var(--muted); min-height: 1.3em; }
 .klein { font-size: .85rem; color: var(--muted); text-align: center; margin: 4px 0 0; }
-.themen { --akzent: var(--zeitung); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; }
+.themen { --akzent: var(--zeitung); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 10px; }
 .themen h2 { margin: 0; font-size: 1.05rem; }
 .themen p { margin: 0; color: var(--muted); font-size: .95rem; }
 .themen p b { color: var(--ink); font-weight: 600; }
 
-/* Zeitung */
-.zt h1 { font-family: var(--f-zeitung); font-size: 2.1rem; }
+/* Zeitung: Ressorts als Kopfleisten wie die Kästen der Folien */
+.zt h1 { font-size: 2rem; }
 .zt .block { display: grid; gap: 12px; }
-.zt h2.ressort { margin: 10px 0 0; padding-top: 12px; border-top: 2px solid var(--ink); font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.zt h2.ressort { margin: 12px 0 0; padding: 8px 12px; background: var(--petrol); color: #fff; border-radius: 4px; font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .zt article { display: grid; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .zt article:last-child { border-bottom: 0; }
-.zt article h3 { margin: 0; font-family: var(--f-zeitung); font-size: 1.3rem; line-height: 1.25; text-wrap: balance; }
+.zt article h3 { margin: 0; font-size: 1.24rem; font-weight: 700; line-height: 1.28; text-wrap: balance; }
 .zt article p { margin: 0; max-width: 65ch; }
-.zt .warum { color: var(--zeitung); font-size: .95rem; }
+.zt .warum { color: var(--hl); font-size: .95rem; font-weight: 600; }
 .zt .quelle { font-size: .9rem; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; justify-self: start; min-height: 44px; display: inline-flex; align-items: center; }
-.persoenlich { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--zeitung); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; }
+.persoenlich { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--cyan); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 10px; }
 .persoenlich h2 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
-.persoenlich h2 span { background: var(--zeitung); color: var(--surface); border-radius: 10px; font-size: .8rem; padding: 0 8px; }
+.persoenlich h2 span { background: var(--petrol); color: #fff; border-radius: 4px; font-size: .8rem; padding: 0 8px; }
 .eintrag { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
 .eintrag p { margin: 0; font-size: .97rem; }
-.pille { font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; background: var(--surface-2); color: var(--ink); }
-.pille.neu { background: var(--zeitung); color: var(--surface); }
-.pille.termin { background: var(--essen-soft); color: var(--essen); }
+.pille { font-size: .75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; background: var(--surface-2); color: var(--ink); }
+.pille.neu { background: var(--cyan); color: var(--navy); }
+.pille.termin { background: var(--zeitung-soft); color: var(--zeitung); }
 .pille.offen { background: var(--lernen-soft); color: var(--lernen); }
 .fuss { color: var(--muted); font-size: .85rem; margin: 0; }
 
@@ -127,8 +130,8 @@ nav.leiste div { max-width: 640px; margin: 0 auto; display: grid; grid-template-
 nav.leiste a { display: grid; justify-items: center; align-content: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: .72rem; font-weight: 600; letter-spacing: .02em; min-height: 44px; position: relative; }
 nav.leiste svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 nav.leiste a[aria-current="page"] { color: var(--ink); }
-nav.leiste a[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--akzent); }
-nav.leiste a[data-v="heute"] { --akzent: var(--sun); } nav.leiste a[data-v="zeitung"] { --akzent: var(--zeitung); }
+nav.leiste a[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; background: var(--akzent); }
+nav.leiste a[data-v="heute"] { --akzent: var(--heute); } nav.leiste a[data-v="zeitung"] { --akzent: var(--zeitung); }
 nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="essen"] { --akzent: var(--essen); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 @media (min-width: 700px) { h1 { font-size: 2.2rem; } }
@@ -170,7 +173,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     <div class="einst-inhalt">
       <div>
         <h3>Schlüssel für deinen persönlichen Teil</h3>
-        <p>Einmal pro Gerät eingeben. Ohne Schlüssel siehst du nur Meldungen und Wetter.</p>
+        <p>Einmal pro Gerät eingeben oder die App über deinen persönlichen Link öffnen. Ohne Schlüssel siehst du nur Meldungen und Wetter.</p>
         <input type="text" id="schluessel" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD EFGH IJKL …" aria-label="Schlüssel">
         <div class="reihe"><button class="knopf" type="button" id="schluessel-speichern" style="--akzent:var(--brand)">Schlüssel speichern</button><button class="knopf leise" type="button" id="schluessel-weg">Schlüssel entfernen</button></div>
         <p class="meldung-status" id="schluessel-status" role="status"></p>
@@ -224,6 +227,26 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
   let zeitung = null, privat = null;
 
+  // ---------- Schlüssel über die Adresse (?k=), seit 15.11.2026 ----------
+  // Am iPhone hat jede Homescreen-App ihren eigenen Speicher. Steht der Schlüssel in der Adresse, nimmt "Zum Home-Bildschirm"
+  // ihn mit (das Manifest hat deshalb kein start_url) und die neue App entsperrt sich selbst. Im öffentlichen Repo steht er nie.
+  const normal = k => String(k || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
+  const alleinstehend = () => navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  function adresse(k) {
+    try {
+      const q = new URLSearchParams(location.search);
+      if (k) q.set("k", normal(k)); else q.delete("k");
+      const t = q.toString();
+      history.replaceState(null, "", location.pathname + (t ? "?" + t : "") + location.hash);
+    } catch (e) {}
+  }
+  (function () {
+    const k = normal(new URLSearchParams(location.search).get("k"));
+    if (k.length >= 20) { if (normal(lsGet(KEY)) !== k) lsSet(KEY, k); return; }
+    // In Safari mit gespeichertem Schlüssel: Adresse ergänzen, damit ein späteres "Zum Home-Bildschirm" ihn mitnimmt
+    if (lsGet(KEY) && !alleinstehend()) adresse(lsGet(KEY));
+  })();
+
   // ---------- Ansichten über die Adresse (#heute, #zeitung, #lernen, #essen) ----------
   function rahmenLaden(v) {
     const f = document.querySelector("#v-" + v + " iframe");
@@ -246,7 +269,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   function zeichneHeute() {
     const jetzt = new Date(), h = jetzt.getHours();
     $("gruss").textContent = h < 11 ? "Guten Morgen" : h < 18 ? "Hallo Gregor" : "Guten Abend";
-    $("h-heute").textContent = WT[jetzt.getDay()] + ", " + jetzt.getDate() + ". " + jetzt.toLocaleDateString("de-AT", { month: "long" });
+    $("h-heute").innerHTML = '<span class="hl">' + WT[jetzt.getDay()] + "</span>, " + jetzt.getDate() + ". " + jetzt.toLocaleDateString("de-AT", { month: "long" });
     // Lernen
     const lz = lies(LERN + "-zusammenfassung");
     if (lz && lz.kurse && lz.kurse.length) {
@@ -367,11 +390,11 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     if (zeitung && zeitung.privat) {
       try { privat = await entschluessle(zeitung.privat, k); } catch (e) { $("schluessel-status").textContent = "Der Schlüssel passt nicht. Bitte noch einmal prüfen."; return; }
     }
-    lsSet(KEY, k); $("schluessel").value = "";
+    lsSet(KEY, k); $("schluessel").value = ""; if (!alleinstehend()) adresse(k);
     $("schluessel-status").textContent = "Gespeichert. Dein persönlicher Teil ist jetzt sichtbar.";
     zeichneZeitung(); zeichneZeitungKarte();
   };
-  $("schluessel-weg").onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} privat = null; $("schluessel-status").textContent = "Schlüssel von diesem Gerät entfernt."; if (zeitung) { zeichneZeitung(); zeichneZeitungKarte(); } };
+  $("schluessel-weg").onclick = () => { try { localStorage.removeItem(KEY); } catch (e) {} adresse(null); privat = null; $("schluessel-status").textContent = "Schlüssel von diesem Gerät entfernt."; if (zeitung) { zeichneZeitung(); zeichneZeitungKarte(); } };
 
   // ---------- Stand übernehmen (Lernkartei und Meal Prep) ----------
   function rahmenNeu(v) { const f = document.querySelector("#v-" + v + " iframe"); if (f && f.getAttribute("src")) try { f.contentWindow.location.reload(); } catch (e) { f.src = f.dataset.src; } }

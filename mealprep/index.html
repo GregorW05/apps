@@ -172,6 +172,10 @@ details.rec[open] summary::after { content: "−"; }
 /* Eingebettet in Tagwerk: Kopfzeile aus, Übertragen-Knopf aus */
 .eingebettet header.top, .eingebettet #uebertragenZeile { display: none; }
 .eingebettet .wrap { padding-block: 12px 24px; }
+/* Eingebettet in der App Wieser Ventures: Farben der Canada-Goose-Präsentation (seit 15.11.2026), eigenständige App unverändert */
+html.eingebettet { --bg: #F3F6F8; --surface: #ffffff; --ink: #0E2841; --muted: #4F6575; --line: #D3E0E8; --accent: #084F6A; --accent-ink: #ffffff; --soft: #E2EEF3; --done: #9AAFBC; }
+@media (prefers-color-scheme: dark) { html.eingebettet:not([data-theme="light"]) { --bg: #071827; --surface: #0E2336; --ink: #E4EEF4; --muted: #93AABA; --line: #1E3A52; --accent: #4CC3F0; --accent-ink: #06202F; --soft: #12324A; --done: #4F6A7C; color-scheme: dark } }
+html.eingebettet[data-theme="dark"] { --bg: #071827; --surface: #0E2336; --ink: #E4EEF4; --muted: #93AABA; --line: #1E3A52; --accent: #4CC3F0; --accent-ink: #06202F; --soft: #12324A; --done: #4F6A7C; color-scheme: dark }
 </style>
 
 <script>if (/[?&]einbetten(=|&|$)/.test(location.search)) document.documentElement.classList.add("eingebettet");</script>
