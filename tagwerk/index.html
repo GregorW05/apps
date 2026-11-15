@@ -105,7 +105,9 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 /* Vorlesen */
 .vorlesen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .zt .fussleiste { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
-.anhoeren { min-height: 44px; border: 0; background: none; color: var(--hl); font: inherit; font-size: .9rem; font-weight: 600; padding: 0; cursor: pointer; }
+.anhoeren { justify-self: start; min-height: 36px; margin: -2px 0 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--hl); font: inherit; font-size: .88rem; font-weight: 600; padding: 0 12px; cursor: pointer; }
+.zt article.liest .anhoeren { background: var(--petrol); border-color: var(--petrol); color: #fff; }
+#z-tempo { width: auto; min-height: 44px; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--ink); font-weight: 600; padding: 0 10px; }
 /* Einklappen (seit 15.11.2026): zu zeigt Überschrift und Anriss, auf den ganzen Bericht */
 .zt article .kopfzeile { all: unset; display: block; cursor: pointer; padding-right: 30px; position: relative; -webkit-tap-highlight-color: transparent; }
 .zt article .kopfzeile::after { content: "+"; position: absolute; right: 2px; top: -2px; color: var(--muted); font-weight: 400; font-size: 1.5rem; line-height: 1; }
@@ -242,7 +244,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     <h1 id="h-zeitung">Morgenzeitung</h1>
     <p class="wetter" id="z-wetter"></p>
   </header>
-  <div class="vorlesen" id="z-vorlesen"><button class="knopf" type="button" id="z-alle">Alles anhören</button><button class="knopf leise" type="button" id="z-pause" hidden>Pause</button><button class="knopf leise" type="button" id="z-stopp" hidden>Stopp</button><button class="knopf leise" type="button" id="z-tempo" aria-label="Lesetempo">1×</button><button class="knopf leise" type="button" id="z-klapp">Alle aufklappen</button></div>
+  <div class="vorlesen" id="z-vorlesen"><button class="knopf" type="button" id="z-alle">Alles anhören</button><button class="knopf leise" type="button" id="z-pause" hidden>Pause</button><button class="knopf leise" type="button" id="z-stopp" hidden>Stopp</button><select id="z-tempo" aria-label="Lesetempo"><option value="0.8">0,8×</option><option value="1">1×</option><option value="1.1">1,1×</option><option value="1.3">1,3×</option><option value="1.5">1,5×</option><option value="2">2×</option><option value="2.5">2,5×</option></select><button class="knopf leise" type="button" id="z-klapp">Alle aufklappen</button></div>
   <section class="persoenlich" id="z-privat" aria-labelledby="z-privat-titel" hidden></section>
   <div class="block" id="z-inhalt"></div>
   <section class="themen" aria-labelledby="z-themen-titel"><h2 id="z-themen-titel">Deine Themen</h2><p id="z-themen">Ab der nächsten Ausgabe wählt die Zeitung danach aus.</p><a class="knopf" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen bewerten, 1 bis 10</a></section>
@@ -378,11 +380,11 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
       const id = i + "-" + j, abs = String(m.text || "").split(/\n{2,}/).filter(x => x.trim()), auf = ls.offen.includes(id);
       const erst = abs[0] || "", k = erst.search(/[.!?]\s/);
       const anriss = k > 40 && k < 230 ? erst.slice(0, k + 1) : erst.length > 190 ? erst.slice(0, 187).replace(/\s\S*$/, "") + " …" : erst;
-      return '<article data-id="' + id + '" class="' + (auf ? "auf" : "zu") + (ls.gelesen.includes(id) ? " gelesen" : "") + '"><h3><button type="button" class="kopfzeile" aria-expanded="' + auf + '" aria-controls="b-' + id + '">' + esc(m.titel) + "</button></h3>" +
+      return '<article data-id="' + id + '" class="' + (auf ? "auf" : "zu") + (ls.gelesen.includes(id) ? " gelesen" : "") + '"><h3><button type="button" class="kopfzeile" aria-expanded="' + auf + '" aria-controls="b-' + id + '">' + esc(m.titel) + "</button></h3>" + (TTS ? '<button type="button" class="anhoeren" data-id="' + id + '" aria-label="' + esc(m.titel) + ' anhören">▶ Anhören</button>' : "") +
         '<p class="anriss">' + esc(anriss) + '</p><div class="koerper" id="b-' + id + '">' + abs.map(x => "<p>" + esc(x) + "</p>").join("") + (w[id] ? '<p class="warum">' + esc(w[id]) + "</p>" : "") +
-        '<div class="fussleiste">' + (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + (TTS ? '<button type="button" class="anhoeren" data-id="' + id + '">Ab hier anhören</button>' : "") + '<button type="button" class="zuklappen">Zuklappen</button></div></div></article>';
+        '<div class="fussleiste">' + (m.url ? '<a class="quelle" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.quelle || "Quelle") + " öffnen</a>" : "") + '<button type="button" class="zuklappen">Zuklappen</button></div></div></article>';
     }).join("")).join("");
-    $("z-inhalt").querySelectorAll(".anhoeren").forEach(b => b.onclick = () => vorlesen(b.dataset.id));
+    $("z-inhalt").querySelectorAll(".anhoeren").forEach(b => b.onclick = () => { if (lesen.an && b.closest("article").classList.contains("liest")) stopp(); else vorlesen(b.dataset.id); });
     $("z-inhalt").querySelectorAll("article").forEach(art => {
       art.querySelector(".kopfzeile").onclick = () => klappe(art, !art.classList.contains("auf"));
       art.querySelector(".zuklappen").onclick = () => klappe(art, false, true);
@@ -455,6 +457,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   const TTS = window.speechSynthesis || null;
   let lesen = { an: false, pause: false, u: [] };
   let tempo = Number(lsGet("wv-tempo")) || 1;
+  if (![0.8, 1, 1.1, 1.3, 1.5, 2, 2.5].includes(tempo)) tempo = 1;
   function stimme() {
     const v = TTS.getVoices(), gb = v.filter(x => /^en[-_]GB/i.test(x.lang));
     return gb.find(x => /premium|enhanced|natural|neural/i.test(x.name)) || gb.find(x => /Daniel|Serena|Kate|Arthur|Martha|Sonia|Ryan|Libby|Stephanie/i.test(x.name)) || gb[0] || v.find(x => /^en/i.test(x.lang)) || null;
@@ -468,12 +471,19 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     }));
     return out;
   }
-  function markiereArtikel(id) { document.querySelectorAll("#z-inhalt article").forEach(a => { a.classList.toggle("liest", a.dataset.id === id); if (id && a.dataset.id === id && a.classList.contains("zu")) klappe(a, true); }); }
+  function markiereArtikel(id) {
+    document.querySelectorAll("#z-inhalt article").forEach(a => {
+      const an = !!id && a.dataset.id === id, k = a.querySelector(".anhoeren");
+      a.classList.toggle("liest", an);
+      if (k) k.textContent = an ? "■ Stopp" : "▶ Anhören";
+      if (an && a.classList.contains("zu")) klappe(a, true);
+    });
+  }
   function leseLeiste() {
     $("z-alle").hidden = lesen.an; $("z-pause").hidden = !lesen.an; $("z-stopp").hidden = !lesen.an;
     $("z-pause").textContent = lesen.pause ? "Weiter" : "Pause";
     $("k-anhoeren").textContent = lesen.an ? "Stopp" : "Anhören";
-    $("z-tempo").textContent = String(tempo).replace(".", ",") + "×";
+    $("z-tempo").value = String(tempo);
   }
   function stopp() { if (TTS) TTS.cancel(); lesen = { an: false, pause: false, u: [] }; markiereArtikel(null); leseLeiste(); }
   function vorlesen(abId) {
@@ -497,7 +507,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     $("z-alle").onclick = () => vorlesen();
     $("z-stopp").onclick = stopp;
     $("z-pause").onclick = () => { if (!lesen.an) return; if (lesen.pause) TTS.resume(); else TTS.pause(); lesen.pause = !lesen.pause; leseLeiste(); };
-    $("z-tempo").onclick = () => { const st = [1, 1.15, 1.3, 0.9]; tempo = st[(st.indexOf(tempo) + 1) % st.length] || 1; lsSet("wv-tempo", String(tempo)); leseLeiste(); if (lesen.an) { const a = document.querySelector("#z-inhalt article.liest"); vorlesen(a ? a.dataset.id : undefined); } };
+    $("z-tempo").onchange = () => { tempo = Number($("z-tempo").value) || 1; lsSet("wv-tempo", String(tempo)); leseLeiste(); if (lesen.an) { const a = document.querySelector("#z-inhalt article.liest"); vorlesen(a ? a.dataset.id : undefined); } };
     $("k-anhoeren").onclick = () => { if (lesen.an) stopp(); else vorlesen(); };
     TTS.getVoices();
     leseLeiste();
