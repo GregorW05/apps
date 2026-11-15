@@ -70,6 +70,8 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .karte.kalender { --akzent: var(--lernen); --soft: var(--lernen-soft); --leiste-farbe: var(--ozean); }
 .karte.spiel { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
 .liste { display: grid; gap: 10px; }
+.liste h3.gruppe { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
+.liste h3.gruppe:first-child { margin-top: 0; }
 /* Rätsel des Tages */
 #spiel, .sp { display: grid; gap: 10px; min-width: 0; }
 .sp-text { margin: 0; font-size: .97rem; }
@@ -203,7 +205,7 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   </section>
 
   <section class="karte kalender" aria-labelledby="k-kalender">
-    <h2 id="k-kalender">Kalender <span id="k-kalender-info"></span></h2>
+    <h2 id="k-kalender">Termine und To-dos <span id="k-kalender-info"></span></h2>
     <div class="liste" id="k-termine"><p class="zeile">Lädt</p></div>
   </section>
 
@@ -337,12 +339,15 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
       box.innerHTML = '<p class="zeile">' + (lsGet(KEY) === null ? "Gesperrt. Öffne die App einmal über deinen persönlichen Link oder gib den Schlüssel unter Einstellungen ein." : "Der gespeicherte Schlüssel passt nicht zu dieser Ausgabe.") + "</p>";
       return;
     }
-    const rang = { termin: 0, neu: 1, offen: 2 };
-    const e = privat.eintraege.slice().sort((a, b) => (a.art in rang ? rang[a.art] : 3) - (b.art in rang ? rang[b.art] : 3));
-    const t = e.filter(x => x.art === "termin").length;
-    info.textContent = t ? t + (t === 1 ? " Termin" : " Termine") : "keine Termine";
+    // Labels kommen englisch aus der Zeitung, auf der Startseite deutsch
+    const de = l => String(l || "").replace(/^Tomorrow\b/i, "Morgen").replace(/^Today\b/i, "Heute").replace(/^Open$/i, "Offen").replace(/^New reply$/i, "Neu").replace(/^New$/i, "Neu").replace(/^Appointment$/i, "Termin");
+    const zeile = x => '<div class="eintrag"><span class="pille ' + esc(x.art) + '">' + esc(de(x.label)) + "</span><p>" + (x.wer ? "<b>" + esc(x.wer) + "</b> " : "") + esc(x.text) + "</p></div>";
+    const termine = privat.eintraege.filter(x => x.art === "termin");
+    const todos = privat.eintraege.filter(x => x.art !== "termin").sort((a, b) => (a.art === "neu" ? 0 : 1) - (b.art === "neu" ? 0 : 1));
+    info.textContent = termine.length + (termine.length === 1 ? " Termin" : " Termine") + " · " + todos.length + (todos.length === 1 ? " To-do" : " To-dos");
     const stand = zeitung.erstellt ? new Date(zeitung.erstellt) : null;
-    box.innerHTML = (t ? "" : '<p class="zeile">Heute keine Termine.</p>') + e.map(x => '<div class="eintrag"><span class="pille ' + esc(x.art) + '">' + esc(x.label) + "</span><p>" + (x.wer ? "<b>" + esc(x.wer) + "</b> " : "") + esc(x.text) + "</p></div>").join("") +
+    box.innerHTML = '<h3 class="gruppe">Termine</h3>' + (termine.length ? termine.map(zeile).join("") : '<p class="zeile">Heute keine Termine.</p>') +
+      (todos.length ? '<h3 class="gruppe">To-dos</h3>' + todos.map(zeile).join("") : "") +
       (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
   }
 
@@ -389,14 +394,8 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
     if (th && ((th.oben && th.oben.length) || (th.nie && th.nie.length))) {
       $("z-themen").innerHTML = (th.oben.length ? "Oben " + th.oben.map(t => "<b>" + esc(t[0]) + "</b> " + esc(t[1])).join(", ") + ". " : "") + (th.nie.length ? "Nie " + th.nie.map(esc).join(", ") + "." : "");
     } else $("z-themen").textContent = "Ab der nächsten Ausgabe wählt die Zeitung danach aus.";
-    const p = $("z-privat");
-    if (privat) {
-      p.innerHTML = '<h2 id="z-privat-titel">Heute und Antworten <span>' + privat.anzahl + "</span></h2>" + privat.eintraege.map(e =>
-        '<div class="eintrag"><span class="pille ' + esc(e.art) + '">' + esc(e.label) + "</span><p>" + (e.wer ? "<b>" + esc(e.wer) + "</b> " : "") + esc(e.text) + "</p></div>").join("");
-    } else {
-      p.innerHTML = '<h2 id="z-privat-titel">Heute und Antworten</h2><p style="margin:0;color:var(--muted)">Gesperrt. Gib auf der Startseite unter Einstellungen deinen Schlüssel ein, dann siehst du hier Termine, Antworten und warum eine Meldung dich betrifft.</p>';
-    }
-    p.hidden = false;
+    // Termine und To-dos stehen seit 15.11.2026 nur auf der Startseite (Gregors Wunsch), nicht mehr in der Zeitung
+    $("z-privat").hidden = true;
   }
   $("z-archiv").addEventListener("change", e => ladeZeitung(e.target.value));
 
