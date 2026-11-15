@@ -131,7 +131,7 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 .zt article.liest .anhoeren { background: var(--petrol); border-color: var(--petrol); color: #fff; }
 #z-tempo { width: auto; min-height: 44px; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--ink); font-weight: 600; padding: 0 10px; }
 /* Einklappen (seit 15.11.2026): zu zeigt Überschrift und Anriss, auf den ganzen Bericht */
-.zt article .kopfzeile { all: unset; display: block; cursor: pointer; padding-right: 30px; position: relative; -webkit-tap-highlight-color: transparent; }
+.zt article .kopfzeile { all: unset; display: block; box-sizing: border-box; width: 100%; cursor: pointer; padding-right: 30px; position: relative; -webkit-tap-highlight-color: transparent; }
 .zt article .kopfzeile::after { content: "+"; position: absolute; right: 2px; top: -2px; color: var(--muted); font-weight: 400; font-size: 1.5rem; line-height: 1; }
 .zt article.auf .kopfzeile::after { content: "−"; }
 .zt article .kopfzeile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
@@ -209,6 +209,25 @@ nav.leiste a[aria-current="page"] { color: var(--ink); }
 nav.leiste a[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; background: var(--akzent); }
 nav.leiste a[data-v="heute"] { --akzent: var(--heute); } nav.leiste a[data-v="zeitung"] { --akzent: var(--zeitung); }
 nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="essen"] { --akzent: var(--essen); }
+/* Laptop-Ansicht (seit 15.11.2026): automatisch ab 1000 px Breite, erzwingbar mit ?ansicht=laptop oder ?ansicht=handy.
+   Leiste oben, Startseite zweispaltig, Zeitung als breitere Lesespalte */
+html.laptop .ansicht { max-width: 1180px; padding-block: calc(var(--leiste) + 28px) 48px; }
+html.laptop #v-heute { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); grid-template-areas: "kopf kopf" "zeitung kalender" "zeitung todos" "spiel todos" "spiel einst" "fuss fuss"; align-items: start; column-gap: 24px; }
+html.laptop #v-heute > header { grid-area: kopf; }
+html.laptop #v-heute > .karte.zeitung { grid-area: zeitung; }
+html.laptop #v-heute > .karte.kalender { grid-area: kalender; }
+html.laptop #v-heute > .karte.todos { grid-area: todos; }
+html.laptop #v-heute > .karte.spiel { grid-area: spiel; }
+html.laptop #v-heute > details.einst { grid-area: einst; }
+html.laptop #v-heute > .klein { grid-area: fuss; }
+html.laptop #v-zeitung { max-width: 860px; }
+html.laptop .zt article p { font-size: 1.06rem; }
+html.laptop nav.leiste { top: 0; bottom: auto; border-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 0; }
+html.laptop nav.leiste div { max-width: 1180px; padding: 0 16px; grid-template-columns: repeat(4, 150px); justify-content: start; gap: 4px; }
+html.laptop nav.leiste a { grid-auto-flow: column; justify-content: center; align-items: center; gap: 8px; font-size: .92rem; }
+html.laptop nav.leiste a[aria-current="page"]::before { top: auto; bottom: 0; left: 18%; right: 18%; border-radius: 3px 3px 0 0; }
+html.laptop .rahmen { top: var(--leiste); bottom: 0; }
+html.laptop .reihe.drei { max-width: 460px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 @media (min-width: 700px) { h1 { font-size: 2.2rem; } }
 </style>
@@ -302,6 +321,13 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   const lies = k => { try { const t = localStorage.getItem(k); return t ? JSON.parse(t) : null; } catch (e) { return null; } };
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+  // Laptop- oder Handy-Ansicht: automatisch nach Breite, erzwingen mit ?ansicht=laptop oder ?ansicht=handy
+  const ansichtWahl = new URLSearchParams(location.search).get("ansicht");
+  const breitMq = window.matchMedia ? matchMedia("(min-width: 1000px)") : { matches: false };
+  let laptop = false;
+  function layout() { laptop = ansichtWahl === "laptop" || (ansichtWahl !== "handy" && breitMq.matches); document.documentElement.classList.toggle("laptop", laptop); }
+  layout();
+  if (breitMq.addEventListener) breitMq.addEventListener("change", () => { layout(); zeichneZeitungKarte(); });
   const LERN = "sani-lernkartei-v1", ESSEN = "mp-einkauf-state", KEY = "tagwerk-schluessel";
   const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
@@ -358,7 +384,8 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   function zeichneZeitungKarte() {
     if (!zeitung) return;
     $("k-zeitung-nr").textContent = "Ausgabe " + zeitung.ausgabe + (zeitung.datum !== heuteISO() ? " vom " + zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + "." : "");
-    $("k-schlagzeilen").innerHTML = zeitung.kurz.map(t => "<li>" + esc(t) + "</li>").join("");
+    const titel = laptop ? zeitung.ressorts.flatMap(r => r.meldungen.map(m => m.titel)).slice(0, 10) : zeitung.kurz;
+    $("k-schlagzeilen").innerHTML = titel.map(t => "<li>" + esc(t) + "</li>").join("");
     $("wetter-kurz").innerHTML = zeitung.wetter ? "<span>" + esc(zeitung.wetter) + "</span>" + (zeitung.sonne ? "<span>" + esc(zeitung.sonne) + "</span>" : "") : "";
     zeichneKalender();
   }
@@ -604,7 +631,13 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
   // Lernen und Essen im Hintergrund vorladen, damit die Zahlen auf der Startseite frisch sind und der Wechsel sofort geht
   const vorladen = () => { rahmenLaden("lernen"); setTimeout(() => rahmenLaden("essen"), 400); };
   if ("requestIdleCallback" in window) requestIdleCallback(vorladen, { timeout: 1500 }); else setTimeout(vorladen, 800);
-  if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    // Neue Version: der Service Worker übernimmt sofort, die Seite lädt einmal neu (seit 15.11.2026, damit Gregor nichts schließen muss)
+    const hatteSW = !!navigator.serviceWorker.controller; let neuGeladen = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hatteSW && !neuGeladen) { neuGeladen = true; location.reload(); } });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); });
+  }
 })();
 </script>
 </body>
