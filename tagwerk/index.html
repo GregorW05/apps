@@ -255,6 +255,15 @@ html.laptop nav.leiste a { grid-auto-flow: column; justify-content: center; alig
 html.laptop nav.leiste a[aria-current="page"]::before { top: auto; bottom: 0; left: 18%; right: 18%; border-radius: 3px 3px 0 0; }
 html.laptop .rahmen { top: var(--leiste); bottom: 0; }
 html.laptop .reihe.drei { max-width: 460px; }
+/* Ziehen zum Aktualisieren (seit 16.11.2026, wie in Chrome am Handy): oben weit nach unten ziehen, Kreis mit Pfeil erscheint, loslassen lädt neu */
+.ptr { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 30; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 3px 10px rgba(14, 40, 65, .22); display: grid; place-items: center;
+  color: var(--muted); opacity: 0; transform: translateY(-60px); pointer-events: none; }
+.ptr svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ptr.bereit, .ptr.laeuft { color: var(--hl); }
+.ptr.laeuft svg { animation: ptr-dreh .7s linear infinite; }
+@keyframes ptr-dreh { to { transform: rotate(360deg); } }
+html.laptop .ptr { top: calc(var(--leiste) + 6px); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 @media (min-width: 700px) { h1 { font-size: 2.2rem; } }
 </style>
@@ -343,6 +352,7 @@ html.laptop .reihe.drei { max-width: 460px; }
   </div>
   <div class="mini-balken"><i id="mini-fort"></i></div>
 </div></div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4.5v4.6h-4.6"/></svg></div>
 <nav class="leiste" aria-label="Bereiche"><div>
   <a href="#heute" data-v="heute" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 15a5.5 5.5 0 0 1 11 0"/><path d="M3 15h18M7 19h10M12 4.5v2M5.2 8.2l1.4 1.4M18.8 8.2l-1.4 1.4"/></svg>Heute</a>
   <a href="#zeitung" data-v="zeitung"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg>Zeitung</a>
@@ -806,6 +816,73 @@ html.laptop .reihe.drei { max-width: 460px; }
     $("import").value = "";
     zeichneHeute();
   };
+
+  // ---------- Ziehen zum Aktualisieren (seit 16.11.2026, Gregors Wunsch, wie bei Google/Chrome am Handy) ----------
+  // Nur auf Heute und Zeitung und nur, wenn die Seite ganz oben steht. Weit nach unten ziehen, bis der Pfeil blau wird, dann loslassen:
+  // die App lädt komplett neu (Zeitung, Termine, To-dos und eine neue App-Version). Läuft gerade das Vorlesen, lädt sie nur die Daten neu.
+  (function () {
+    const el = $("ptr"), pfeil = el.querySelector("svg"), SCHWELLE = 72, MAX = 110, VERSATZ = 46;
+    const NICHT = ".brett, input, textarea, select, .mini, nav.leiste, iframe";
+    let start = null, aktiv = false, weg = 0, laeuft = false;
+    const ansichtOk = () => { const v = location.hash.slice(1) || "heute"; return v === "heute" || v === "zeitung"; };
+    function zeige(d) {
+      const y = Math.min(d, MAX);
+      el.style.transition = "none";
+      el.style.opacity = String(Math.min(1, y / (SCHWELLE * .6)));
+      el.style.transform = "translateY(" + (y - VERSATZ) + "px)";
+      pfeil.style.transform = "rotate(" + Math.round(y / SCHWELLE * 300) + "deg)";
+      el.classList.toggle("bereit", d >= SCHWELLE);
+    }
+    function zurueck() {
+      el.style.transition = "transform .22s ease, opacity .22s ease";
+      el.style.transform = ""; el.style.opacity = ""; pfeil.style.transform = "";
+      el.classList.remove("bereit", "laeuft");
+    }
+    async function aktualisieren() {
+      laeuft = true;
+      el.classList.remove("bereit"); el.classList.add("laeuft"); pfeil.style.transform = "";
+      el.style.transition = "transform .18s ease"; el.style.transform = "translateY(" + (SCHWELLE - VERSATZ) + "px)"; el.style.opacity = "1";
+      if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
+      if (lesen.an) {
+        // Vorlesen nicht abbrechen: nur Zeitung und Startseite neu holen
+        if ($("z-archiv").selectedIndex <= 0) await ladeZeitung();
+        if (!$("v-heute").hidden) zeichneHeute();
+        setTimeout(() => { laeuft = false; zurueck(); }, 350);
+        return;
+      }
+      merkePosition();
+      setTimeout(() => location.reload(), 250);
+    }
+    document.addEventListener("touchstart", e => {
+      start = null; aktiv = false; weg = 0;
+      if (laeuft || e.touches.length !== 1 || window.scrollY > 0 || !ansichtOk()) return;
+      if (e.target && e.target.closest && e.target.closest(NICHT)) return;
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    document.addEventListener("touchmove", e => {
+      if (!start) return;
+      if (e.touches.length !== 1) { start = null; if (aktiv) { aktiv = false; zurueck(); } return; }
+      const dx = e.touches[0].clientX - start.x, dy = e.touches[0].clientY - start.y;
+      if (!aktiv) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        // nach oben oder seitlich: normales Scrollen, nichts tun
+        if (dy <= 0 || Math.abs(dx) > dy || window.scrollY > 0) { start = null; return; }
+        aktiv = true;
+      }
+      if (e.cancelable) e.preventDefault();
+      weg = Math.max(0, dy) * .5; // Widerstand: der Finger muss ungefähr doppelt so weit ziehen
+      zeige(weg);
+    }, { passive: false });
+    function ende() {
+      if (!start) return;
+      const war = aktiv, d = weg;
+      start = null; aktiv = false; weg = 0;
+      if (!war) return;
+      if (d >= SCHWELLE) aktualisieren(); else zurueck();
+    }
+    document.addEventListener("touchend", ende);
+    document.addEventListener("touchcancel", () => { if (start && aktiv) { start = null; aktiv = false; weg = 0; zurueck(); } else start = null; });
+  })();
 
   // ---------- Start ----------
   window.addEventListener("storage", e => { if (!e.key || /zusammenfassung$/.test(e.key)) zeichneHeute(); });
