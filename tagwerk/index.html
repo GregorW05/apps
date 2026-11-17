@@ -618,6 +618,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     privat = null;
     await entsperren();
     zeichneZeitung(); zeichneZeitungKarte(); sendeHaken();
+    if (lesen.an && lesen.liste[lesen.pos]) markiereArtikel(lesen.liste[lesen.pos].id); // nach dem Neuzeichnen die laufende Meldung wieder markieren
     if (!datei) abgleichPruefen();
     if (!posWieder) { posWieder = true; const p = sitz.get("wv-pos"); if (p && p.v === (location.hash.slice(1) || "heute") && p.y > 0) requestAnimationFrame(() => window.scrollTo(0, p.y)); }
     if (!datei) {
@@ -710,15 +711,23 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     scrollUhr = setTimeout(() => { const st = leseStand(zeitung.ausgabe); st.y = Math.round(window.scrollY); lsSet("wv-lesestand", JSON.stringify(st)); }, 300);
   }, { passive: true });
 
-  // ---------- Vorlesen mit der Sprachausgabe des Geräts (seit 15.11.2026) ----------
-  // Am iPhone stoppt die Ausgabe, wenn der Bildschirm sperrt oder die App in den Hintergrund geht.
-  // Vorlesen (seit 15.11.2026 abends): zuerst die vom Server erzeugten MP3s (neuronale Stimme Kokoro, läuft auch bei gesperrtem iPhone),
-  // nur wenn eine Meldung kein Audio hat oder es nicht lädt, die Systemstimme des Geräts.
+  // ---------- Vorlesen (seit 15.11.2026) ----------
+  // Reihenfolge: 1. eine MP3 für die ganze Ausgabe mit Startzeit je Meldung (zeitung.audioGesamt, seit 17.11.2026),
+  // 2. eine MP3 je Meldung (neuronale Stimme Kokoro vom Server), 3. die Systemstimme des Geräts (nur im Vordergrund,
+  // am iPhone verstummt sie bei gesperrtem Bildschirm).
+  // Warum eine Datei für alles: In der Home-Bildschirm-App bleibt das Audio im Hintergrund am Ende jeder Datei stehen,
+  // und die Knöpfe auf dem Sperrbildschirm reagieren danach nicht mehr (WebKit-Fehler 261858, Gregor 17.11.2026).
+  // Mit einer Datei gibt es keinen Dateiwechsel, eine neue Meldung ist nur ein Sprung in derselben Datei.
   const TTS = window.speechSynthesis || null, spieler = new Audio();
   spieler.preload = "auto";
-  let lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: 0 };
+  let lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: 0, g: null };
+  let gesamtSrc = "", sucheBei = null;
+  // Neue App-Version, während vorgelesen wird: erst laden, wenn nichts mehr läuft (sonst bricht das Audio ab)
+  let neuWartet = false, neuGeladen = false;
+  function neuWennFrei() { if (neuWartet && !lesen.an && !neuGeladen) { neuGeladen = true; location.reload(); } }
   let tempo = Number(lsGet("wv-tempo")) || 1;
   if (![0.8, 1, 1.1, 1.3, 1.5, 2, 2.5].includes(tempo)) tempo = 1;
+  const istAudio = () => lesen.modus === "audio" || lesen.modus === "gesamt";
   function stimme() {
     const v = TTS.getVoices(), gb = v.filter(x => /^en[-_]GB/i.test(x.lang));
     return gb.find(x => /premium|enhanced|natural|neural/i.test(x.name)) || gb.find(x => /Daniel|Serena|Kate|Arthur|Martha|Sonia|Ryan|Libby|Stephanie/i.test(x.name)) || gb[0] || v.find(x => /^en/i.test(x.lang)) || null;
@@ -731,6 +740,11 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       out.push({ id: i + "-" + j, t, audio: m.audio || "", titel: m.titel, ressort: r.name });
     }));
     return out;
+  }
+  function gesamtAudio(alle) {
+    const g = zeitung && zeitung.audioGesamt;
+    if (!g || !g.url || !Array.isArray(g.kapitel) || g.kapitel.length !== alle.length) return null;
+    return { url: g.url, kapitel: g.kapitel.map(Number), ausgabe: zeitung.ausgabe };
   }
   function markiereArtikel(id) {
     document.querySelectorAll("#z-inhalt article").forEach(a => {
@@ -748,36 +762,70 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = lesen.an ? (lesen.pause ? "paused" : "playing") : "none";
   }
   let stillBis = 0; // eigenes Anhalten beim Wechseln soll nicht als Pause zählen
-  function anhalten() { stillBis = Date.now() + 800; spieler.onended = spieler.onerror = null; spieler.pause(); if (TTS) TTS.cancel(); }
-  function stopp() { anhalten(); lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: lesen.lauf + 1 }; markiereArtikel(null); leseLeiste(); miniZeigen(false); }
+  function anhalten() { stillBis = Date.now() + 800; spieler.onended = spieler.onerror = null; spieler.pause(); if (TTS && (TTS.speaking || TTS.pending)) TTS.cancel(); }
+  function stopp() {
+    anhalten();
+    // Quelle leeren, damit die Anzeige auf dem Sperrbildschirm verschwindet und nichts Altes mehr startet
+    if (spieler.getAttribute("src")) { spieler.removeAttribute("src"); try { spieler.load(); } catch (e) {} }
+    gesamtSrc = ""; sucheBei = null;
+    lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: lesen.lauf + 1, g: null };
+    markiereArtikel(null); leseLeiste(); miniZeigen(false);
+    if ("mediaSession" in navigator) try { navigator.mediaSession.metadata = null; } catch (e) {}
+    if (document.hidden) neuWennFrei();
+  }
   function miniZeigen(an) { $("mini").classList.toggle("an", an); $("mini").setAttribute("aria-hidden", String(!an)); document.documentElement.classList.toggle("mit-mini", an); if (!an) { $("mini-fort").style.width = "0"; $("mini-zeit").textContent = ""; } }
   function vorlesen(abId) {
     if (!zeitung) return;
     anhalten();
     const alle = artikelTexte(); let ab = abId ? alle.findIndex(a => a.id === abId) : 0; if (ab < 0) ab = 0;
-    const liste = alle.slice(ab);
-    if (!liste.length) return;
-    lesen = { an: true, pause: false, liste, pos: 0, modus: null, lauf: lesen.lauf + 1 };
+    if (!alle.length) return;
+    const g = gesamtAudio(alle);
+    // Mit der Gesamtdatei bleibt die ganze Ausgabe in der Liste, pos ist die Meldung (Kapitel)
+    lesen = { an: true, pause: false, liste: g ? alle : alle.slice(ab), pos: g ? ab : 0, modus: null, lauf: lesen.lauf + 1, g };
     miniZeigen(true);
     spiele(lesen.lauf);
     leseLeiste();
+  }
+  function zeigeMeldung(a) {
+    markiereArtikel(a.id); medienInfo(a);
+    $("mini-titel").textContent = a.titel; $("mini-ressort").textContent = a.ressort + " · Ausgabe " + (lesen.g ? lesen.g.ausgabe : zeitung.ausgabe); $("mini-fort").style.width = "0"; $("mini-zeit").textContent = "";
   }
   function spiele(lauf) {
     if (lesen.lauf !== lauf || !lesen.an) return;
     const a = lesen.liste[lesen.pos];
     if (!a) { stopp(); return; }
-    markiereArtikel(a.id); medienInfo(a);
-    $("mini-titel").textContent = a.titel; $("mini-ressort").textContent = a.ressort + " · Ausgabe " + zeitung.ausgabe; $("mini-fort").style.width = "0"; $("mini-zeit").textContent = "";
+    zeigeMeldung(a);
+    if (lesen.g) { spieleGesamt(lauf); return; }
     let fertig = false;
     const weiter = () => { if (fertig || lesen.lauf !== lauf) return; fertig = true; lesen.pos++; spiele(lauf); };
-    const ersatz = () => { if (fertig || lesen.lauf !== lauf) return; spieler.onended = spieler.onerror = null; sprich(a, weiter); };
+    // Im Hintergrund schweigt die Systemstimme am iPhone: dann lieber gleich die nächste Meldung
+    const ohneAudio = () => { if (document.hidden) weiter(); else sprich(a, weiter); };
+    const ersatz = () => { if (fertig || lesen.lauf !== lauf) return; spieler.onended = spieler.onerror = null; ohneAudio(); };
     if (a.audio) {
       lesen.modus = "audio";
       spieler.onended = weiter; spieler.onerror = ersatz;
       spieler.src = a.audio; spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo;
       const p = spieler.play();
       if (p && p.catch) p.catch(e => { if (e && e.name === "AbortError") return; if (e && e.name === "NotAllowedError") { lesen.pause = true; leseLeiste(); } else ersatz(); });
-    } else sprich(a, weiter);
+    } else ohneAudio();
+  }
+  function spieleGesamt(lauf) {
+    const g = lesen.g, start = g.kapitel[lesen.pos] || 0;
+    lesen.modus = "gesamt";
+    spieler.onended = () => { if (lesen.lauf === lauf) stopp(); };
+    // Gesamtdatei lädt nicht: zurück auf eine Datei je Meldung, ab der Meldung, die gerade dran ist
+    spieler.onerror = () => {
+      if (lesen.lauf !== lauf || !lesen.g) return;
+      spieler.onended = spieler.onerror = null; gesamtSrc = ""; sucheBei = null;
+      lesen.liste = lesen.liste.slice(lesen.pos); lesen.pos = 0; lesen.g = null; lesen.lauf++; spiele(lesen.lauf);
+    };
+    if (gesamtSrc !== g.url) {
+      gesamtSrc = g.url; sucheBei = start > 0 ? start : null;
+      spieler.src = g.url + (start > 0 ? "#t=" + start.toFixed(2) : "");
+    } else if (Math.abs(spieler.currentTime - start) > 0.3) spieler.currentTime = start;
+    spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo;
+    const p = spieler.play();
+    if (p && p.catch) p.catch(e => { if (e && e.name === "AbortError") return; lesen.pause = true; leseLeiste(); });
   }
   function sprich(a, weiter) {
     if (!TTS) { weiter(); return; }
@@ -790,50 +838,87 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       TTS.speak(x);
     });
   }
-  function pauseUmschalten() {
-    if (!lesen.an) return;
-    if (lesen.modus === "audio") { if (lesen.pause) spieler.play().catch(() => {}); else spieler.pause(); }
-    else if (TTS) { if (lesen.pause) TTS.resume(); else TTS.pause(); }
-    lesen.pause = !lesen.pause; leseLeiste();
+  // Weiter und Pause richten sich nach dem, was der Spieler wirklich tut, nicht nach einem Merker.
+  // Früher schaltete ein Merker um; lief er auseinander (Pause im Hintergrund, abgelehntes play()), taten die Knöpfe auf dem Sperrbildschirm nichts.
+  function weiterSpielen() {
+    if (!lesen.an) { vorlesen(); return; }
+    if (istAudio()) {
+      if (lesen.modus === "audio" && spieler.ended) { springe(1); return; }
+      lesen.pause = false; leseLeiste();
+      const p = spieler.play();
+      if (p && p.catch) p.catch(e => { if (e && e.name !== "AbortError") { lesen.pause = true; leseLeiste(); } });
+    } else if (TTS) { TTS.resume(); lesen.pause = false; leseLeiste(); }
   }
-  function springe(um) { if (!lesen.an) return; const n = Math.max(0, Math.min(lesen.liste.length, lesen.pos + um)); anhalten(); lesen.pos = n; lesen.pause = false; lesen.lauf++; spiele(lesen.lauf); leseLeiste(); }
+  function pausieren() {
+    if (!lesen.an) return;
+    if (istAudio()) spieler.pause(); else if (TTS) TTS.pause();
+    lesen.pause = true; leseLeiste();
+  }
+  function pauseUmschalten() { if (!lesen.an) return; if (istAudio() ? spieler.paused : lesen.pause) weiterSpielen(); else pausieren(); }
+  function springe(um) {
+    if (!lesen.an) return;
+    const n = Math.max(0, Math.min(lesen.liste.length, lesen.pos + um));
+    if (lesen.modus === "gesamt" && lesen.g) {
+      if (n >= lesen.liste.length) { stopp(); return; }
+      lesen.pos = n; zeigeMeldung(lesen.liste[n]); spieler.currentTime = lesen.g.kapitel[n];
+      if (spieler.paused) weiterSpielen();
+      return;
+    }
+    anhalten(); lesen.pos = n; lesen.pause = false; lesen.lauf++; spiele(lesen.lauf); leseLeiste();
+  }
   function medienInfo(a) {
     if (!("mediaSession" in navigator) || !window.MediaMetadata) return;
-    try { navigator.mediaSession.metadata = new MediaMetadata({ title: a.titel, artist: a.ressort, album: "Wieser Ventures, Ausgabe " + zeitung.ausgabe, artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }] }); } catch (e) {}
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: a.titel, artist: a.ressort, album: "Wieser Ventures, Ausgabe " + (lesen.g ? lesen.g.ausgabe : zeitung.ausgabe), artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }] }); } catch (e) {}
   }
+  // Start der Meldung, die gerade läuft, in Sekunden der Gesamtdatei (sonst 0)
+  const kapStart = () => lesen.modus === "gesamt" && lesen.g ? lesen.g.kapitel[lesen.pos] || 0 : 0;
   if ("mediaSession" in navigator) {
     const h = (n, f) => { try { navigator.mediaSession.setActionHandler(n, f); } catch (e) {} };
-    h("play", () => { if (lesen.an && lesen.pause) pauseUmschalten(); else if (!lesen.an) vorlesen(); });
-    h("pause", () => { if (lesen.an && !lesen.pause) pauseUmschalten(); });
+    h("play", weiterSpielen);
+    h("pause", pausieren);
     // 10 Sekunden zurück und vor auf dem Sperrbildschirm (iOS zeigt dann die Sprungknöpfe statt Titel vor und zurück)
     h("seekbackward", d => sprung(-((d && d.seekOffset) || 10)));
     h("seekforward", d => sprung((d && d.seekOffset) || 10));
-    h("seekto", d => { if (lesen.modus === "audio" && d && typeof d.seekTime === "number") { spieler.currentTime = d.seekTime; position(); } });
+    h("seekto", d => { if (istAudio() && d && typeof d.seekTime === "number") { spieler.currentTime = kapStart() + d.seekTime; position(); } });
     h("stop", stopp);
   }
   // Pause und Weiter über Kopfhörer oder Sperrbildschirm sollen die Knöpfe in der App mitnehmen
-  spieler.addEventListener("pause", () => { if (Date.now() < stillBis) return; if (lesen.an && lesen.modus === "audio" && !lesen.pause && !spieler.ended && spieler.src) { lesen.pause = true; leseLeiste(); } });
+  spieler.addEventListener("pause", () => { if (Date.now() < stillBis) return; if (lesen.an && istAudio() && !lesen.pause && !spieler.ended && spieler.src) { lesen.pause = true; leseLeiste(); } });
   spieler.addEventListener("play", () => { if (lesen.an && lesen.pause) { lesen.pause = false; leseLeiste(); } });
   $("z-alle").onclick = () => vorlesen();
   function sprung(sek) {
     if (!lesen.an) return;
-    if (lesen.modus !== "audio") { springe(sek < 0 ? 0 : 1); return; }
+    if (!istAudio()) { springe(sek < 0 ? 0 : 1); return; }
     const d = spieler.duration || 0, z = spieler.currentTime + sek;
-    if (d && z >= d - 0.3) { springe(1); return; }
+    if (d && isFinite(d) && z >= d - 0.3) { if (lesen.modus === "gesamt") stopp(); else springe(1); return; }
     spieler.currentTime = Math.max(0, z); position();
   }
   const mmss = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); };
   function position() {
-    if (lesen.modus !== "audio") return;
-    const d = spieler.duration, t = spieler.currentTime;
-    if (d && isFinite(d)) {
-      $("mini-fort").style.width = Math.min(100, t / d * 100) + "%";
-      $("mini-zeit").textContent = mmss(t) + " / " + mmss(d);
-      if ("mediaSession" in navigator && navigator.mediaSession.setPositionState) try { navigator.mediaSession.setPositionState({ duration: d, playbackRate: spieler.playbackRate || 1, position: Math.min(t, d) }); } catch (e) {}
+    if (!istAudio()) return;
+    let d = spieler.duration, t = spieler.currentTime;
+    if (!d || !isFinite(d)) return;
+    if (lesen.modus === "gesamt" && lesen.g) {
+      const k = lesen.g.kapitel;
+      // Welche Meldung läuft gerade? Nicht während eines Sprungs, sonst springt die Anzeige kurz zurück
+      if (!spieler.seeking && sucheBei === null) {
+        let i = 0; while (i + 1 < k.length && k[i + 1] <= t + 0.05) i++;
+        if (i !== lesen.pos && lesen.liste[i]) { lesen.pos = i; zeigeMeldung(lesen.liste[i]); }
+      }
+      const s = k[lesen.pos] || 0, e = lesen.pos + 1 < k.length ? k[lesen.pos + 1] : d;
+      t -= s; d = Math.max(0.1, e - s);
     }
+    $("mini-fort").style.width = Math.max(0, Math.min(100, t / d * 100)) + "%";
+    $("mini-zeit").textContent = mmss(t) + " / " + mmss(d);
+    if ("mediaSession" in navigator && navigator.mediaSession.setPositionState) try { navigator.mediaSession.setPositionState({ duration: d, playbackRate: spieler.playbackRate || 1, position: Math.max(0, Math.min(t, d)) }); } catch (e) {}
   }
   spieler.addEventListener("timeupdate", position);
-  spieler.addEventListener("loadedmetadata", position);
+  spieler.addEventListener("loadedmetadata", () => {
+    // Falls das Gerät die Startzeit in der Adresse (#t=) nicht beachtet, hier nachholen
+    if (lesen.modus === "gesamt" && sucheBei !== null) { if (Math.abs(spieler.currentTime - sucheBei) > 1) spieler.currentTime = sucheBei; sucheBei = null; }
+    position();
+  });
+  spieler.addEventListener("seeked", position);
   $("mini-play").onclick = pauseUmschalten;
   $("mini-zurueck").onclick = () => sprung(-10);
   $("mini-vor").onclick = () => sprung(10);
@@ -841,7 +926,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("z-tempo").onchange = () => {
     tempo = Number($("z-tempo").value) || 1; lsSet("wv-tempo", String(tempo)); leseLeiste();
     if (!lesen.an) return;
-    if (lesen.modus === "audio") { spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo; }
+    if (istAudio()) { spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo; }
     else { anhalten(); lesen.lauf++; spiele(lesen.lauf); }
   };
   $("k-anhoeren").onclick = () => { if (lesen.an) stopp(); else vorlesen(); };
@@ -975,9 +1060,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
     // Neue Version: der Service Worker übernimmt sofort, die Seite lädt einmal neu (seit 15.11.2026, damit Gregor nichts schließen muss)
-    const hatteSW = !!navigator.serviceWorker.controller; let neuGeladen = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hatteSW && !neuGeladen) { neuGeladen = true; location.reload(); } });
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); });
+    // Seit 17.11.2026: nicht mitten im Vorlesen, sonst bricht das Audio ab (neuWennFrei, Block Vorlesen); dann beim nächsten Wechsel in oder aus der App
+    const hatteSW = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hatteSW) { neuWartet = true; neuWennFrei(); } });
+    document.addEventListener("visibilitychange", () => { neuWennFrei(); if (!document.hidden) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}); });
   }
 })();
 </script>
