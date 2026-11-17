@@ -478,13 +478,19 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     // To-dos aus Gregors OneNote-Liste (export_app.py), überfällige und heutige oben, der Rest ausklappbar
     const td = Array.isArray(privat.todos) ? privat.todos : [], tag = heuteISO();
     // Haken (seit 15.11.2026): abgehakte bleiben durchgestrichen stehen, bis der Server sie in OneNote gesetzt hat und sie aus der Liste fallen
-    const hk = hakenStand(), daHs = td.map(x => x.h).filter(Boolean), om = offenMerk(), voll = sitz.get("wv-voll") || [];
+    // Warten auf Antwort (seit 17.11.2026): direkt aus warte-auf.md mit Haken, sonst wie vorher die offenen Punkte aus der Zeitung
+    const wt = Array.isArray(privat.warten) ? privat.warten : null;
+    const hk = hakenStand(), daHs = td.concat(wt || []).map(x => x.h).filter(Boolean), om = offenMerk(), voll = sitz.get("wv-voll") || [];
     if (Object.keys(hk).some(h => !daHs.includes(h))) { Object.keys(hk).forEach(h => { if (!daHs.includes(h)) delete hk[h]; }); lsSet(HAKEN, JSON.stringify(hk)); }
     const tdZeile = x => { const u = x.f && x.f < tag, j = x.f === tag, an = !!(x.h && hk[x.h]); return '<div class="eintrag todo' + (an ? " erledigt" : "") + (x.h && voll.includes(x.h) ? " voll" : "") + '"' + (x.h ? ' data-h="' + esc(x.h) + '"' : "") + '>' + (x.h ? '<button type="button" class="haken" data-h="' + esc(x.h) + '" aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + "</button>" : "<span></span>") + '<span class="pille ' + (u ? "ueber" : j ? "neu" : "offen") + '">' + esc(u ? "seit " + x.d : j ? "heute" : x.d ? "bis " + x.d : "offen") + "</span><p>" + esc(x.t) + "</p></div>"; };
     // Prio 1 (in OneNote "1!", seit 15.11.2026): sehr wichtig und zeitkritisch, eigener roter Block ganz oben
     // Seit 17.11.2026: Haken von vorher (nach Neuladen oder Ziehen zum Aktualisieren) wandern in den Block "Erledigt",
     // nur gerade eben gesetzte bleiben zum Rückgängigmachen durchgestrichen an ihrer Stelle
     const abgehakt = x => !!(x.h && hk[x.h] && !frischeHaken.has(x.h)), fertig = td.filter(abgehakt), offenListe = td.filter(x => !abgehakt(x));
+    const wtZeile = x => { const an = !!hk[x.h]; return '<div class="eintrag todo' + (an ? " erledigt" : "") + (voll.includes(x.h) ? " voll" : "") + '" data-h="' + esc(x.h) + '"><button type="button" class="haken" data-h="' + esc(x.h) + '" data-typ="warten" aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + '</button><span class="pille offen">' + esc(x.seit ? "seit " + x.seit : "offen") + "</span><p>" + (x.wer ? "<b>" + esc(x.wer) + "</b> " : "") + esc(x.t) + (x.n ? " (" + esc(x.n) + ")" : "") + "</p></div>"; };
+    const wtFertig = wt ? wt.filter(abgehakt) : [], wtSicht = wt ? wt.filter(x => !abgehakt(x)) : [], wtOffen = wt ? wt.filter(x => !hk[x.h]).length : warten.length;
+    const fertigHtml = fertig.map(tdZeile).join("") + wtFertig.map(wtZeile).join(""), fertigN = fertig.length + wtFertig.length;
+    const wartenHtml = wt ? wtSicht.map(wtZeile).join("") : warten.map(zeile).join("");
     const krit = offenListe.filter(x => x.k), normal = offenListe.filter(x => !x.k);
     const sicht = normal.filter(x => x.f && x.f <= tag).slice(0, 4), rest = normal.filter(x => !sicht.includes(x));
     const offenTd = td.filter(x => !(x.h && hk[x.h]));
@@ -494,14 +500,14 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       (krit.length ? '<div class="prio1"><p class="prio1-titel">Prio 1, wichtig und zeitkritisch</p>' + krit.map(tdZeile).join("") + "</div>" : "") +
       neu.map(zeile).join("") + kalTodo.map(zeile).join("") + sicht.map(tdZeile).join("") +
       (rest.length ? '<details class="mehr" data-merk="todos-weitere"' + (om["todos-weitere"] ? " open" : "") + '><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
-      (fertig.length ? '<details class="mehr erledigt-block" data-merk="todos-erledigt"' + (om["todos-erledigt"] ? " open" : "") + '><summary>Erledigt (' + fertig.length + ")</summary><div class=\"liste-innen\">" + fertig.map(tdZeile).join("") + "</div></details>" : "") +
-      (warten.length ? '<details class="mehr" data-merk="todos-warten"' + (om["todos-warten"] ? " open" : "") + '><summary>Warten auf Antwort (' + warten.length + ")</summary><div class=\"liste-innen\">" + warten.map(zeile).join("") + "</div></details>" : "") +
+      (wartenHtml ? '<details class="mehr" data-merk="todos-warten"' + (om["todos-warten"] ? " open" : "") + '><summary>Warten auf Antwort (' + wtOffen + ")</summary><div class=\"liste-innen\">" + wartenHtml + "</div></details>" : "") +
+      (fertigN ? '<details class="mehr erledigt-block" data-merk="todos-erledigt"' + (om["todos-erledigt"] ? " open" : "") + '><summary>Erledigt (' + fertigN + ")</summary><div class=\"liste-innen\">" + fertigHtml + "</div></details>" : "") +
       '<p class="sp-meta" id="k-todos-sync"></p>';
     tb.querySelectorAll(".eintrag.todo p").forEach(x => x.onclick = () => {
       const z = x.parentElement, auf = z.classList.toggle("voll"), h = z.dataset.h;
       if (h) { const v = (sitz.get("wv-voll") || []).filter(y => y !== h); if (auf) v.push(h); sitz.set("wv-voll", v); }
     });
-    tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const x = td.find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true"); });
+    tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const typ = b.dataset.typ || "", x = (typ === "warten" ? wt || [] : td).find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true", typ); });
     hakenInfo();
   }
 
@@ -520,13 +526,13 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const mkey = await crypto.subtle.importKey("raw", mk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
     return { iv: zuB64(iv), ct: zuB64(ct), mac: zuB64(new Uint8Array(await crypto.subtle.sign("HMAC", mkey, daten))) };
   }
-  function setzeHaken(h, text, an) {
+  function setzeHaken(h, text, an, typ) {
     const st = hakenStand();
     if (an) st[h] = { ts: Date.now() }; else delete st[h];
     if (an) frischeHaken.add(h); else frischeHaken.delete(h);
     lsSet(HAKEN, JSON.stringify(st));
     const q = (lies(SCHLANGE) || []).filter(x => x.h !== h);
-    q.push({ a: an ? "erledigt" : "offen", h: h, t: String(text).slice(0, 200), ts: Date.now() });
+    q.push(Object.assign({ a: an ? "erledigt" : "offen", h: h, t: String(text).slice(0, 200), ts: Date.now() }, typ ? { typ: typ } : {}));
     lsSet(SCHLANGE, JSON.stringify(q));
     zeichneKalender(); sendeHaken();
   }
@@ -550,7 +556,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   function hakenInfo() {
     const el = $("k-todos-sync"); if (!el) return;
     const q = (lies(SCHLANGE) || []).length, n = Object.keys(hakenStand()).length;
-    el.textContent = q ? q + (q === 1 ? " Haken wartet" : " Haken warten") + " auf Verbindung" : abgleichMeldung ? abgleichMeldung : n ? "Abgehakt. OneNote ist in etwa einer Minute aktuell, Ziehen zum Aktualisieren holt den neuen Stand." : "";
+    el.textContent = q ? q + (q === 1 ? " Haken wartet" : " Haken warten") + " auf Verbindung" : abgleichMeldung ? abgleichMeldung : n ? "Abgehakt. Der Server trägt es in etwa einer Minute ein, Ziehen zum Aktualisieren holt den neuen Stand." : "";
   }
 
   // ---------- Abgleich auf Wunsch (seit 17.11.2026, Gregors Wunsch) ----------
