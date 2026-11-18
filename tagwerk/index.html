@@ -77,14 +77,28 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .pille.ueber { background: rgba(179, 38, 58, .13); color: var(--rot); }
-.prio1 { background: color-mix(in srgb, var(--rot) 9%, transparent); border: 1px solid color-mix(in srgb, var(--rot) 28%, transparent); border-radius: 10px; padding: 6px 10px 2px; margin: 0 0 10px; }
-.prio1-titel { margin: 2px 0 4px; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--rot); }
-.eintrag.todo p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
-.eintrag.todo.voll p { display: block; -webkit-line-clamp: unset; }
-.eintrag.todo { grid-template-columns: auto auto 1fr; }
-.haken { width: 26px; height: 26px; margin: -3px 0 0; padding: 0; border: 2px solid var(--ozean); border-radius: 4px; background: transparent; color: var(--navy); font: 700 17px/1 system-ui, sans-serif; cursor: pointer; display: grid; place-items: center; }
+/* To-do-Zeilen seit 18.11.2026 einheitlich: Haken links, Text immer an derselben Kante, Frist als kleine Zeile darunter.
+   Blöcke (Warten auf Antwort, Prio 1) ragen links und rechts so weit hinaus, dass ihre Haken mit den übrigen fluchten. */
+.prio1, .warten-block { display: grid; gap: 12px; border-radius: 10px; padding: 10px 10px 12px; margin: 0 -11px 2px; }
+.prio1 { background: color-mix(in srgb, var(--rot) 8%, transparent); border: 1px solid color-mix(in srgb, var(--rot) 28%, transparent); }
+.warten-block { background: color-mix(in srgb, var(--cyan) 8%, transparent); border: 1px solid color-mix(in srgb, var(--cyan) 32%, transparent); }
+.block-titel { margin: 0; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+.prio1 .block-titel { color: var(--rot); }
+.eintrag.todo { grid-template-columns: 26px minmax(0, 1fr); gap: 12px; }
+.td-inhalt { display: grid; gap: 2px; min-width: 0; }
+.eintrag.todo .td-text { margin: 0; font-size: .97rem; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; overflow-wrap: anywhere; }
+.eintrag.todo.voll .td-text { display: block; -webkit-line-clamp: unset; }
+.td-text b { font-weight: 650; }
+.td-rest { color: var(--muted); }
+.td-meta { margin: 0; font-size: .8rem; font-weight: 600; line-height: 1.35; color: var(--muted); }
+.td-meta.ueber { color: var(--rot); }
+.td-meta.heute { color: var(--hl); }
+.td-punkt { width: 26px; height: 22px; display: grid; place-items: center; }
+.td-punkt::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); }
+.haken { width: 26px; height: 26px; margin: -2px 0 0; padding: 0; border: 2px solid var(--ozean); border-radius: 4px; background: var(--surface); color: var(--navy); font: 700 17px/1 system-ui, sans-serif; cursor: pointer; display: grid; place-items: center; }
 .haken[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); }
-.eintrag.todo.erledigt p, .eintrag.todo.erledigt .pille { text-decoration: line-through; opacity: .5; }
+.eintrag.todo.erledigt .td-text, .eintrag.todo.erledigt .td-meta { text-decoration: line-through; opacity: .5; }
+#k-todos-sync:empty { display: none; }
 .erledigt-block summary { color: var(--muted); }
 details.mehr { border-top: 1px solid var(--line); padding-top: 4px; }
 details.mehr summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; font-weight: 600; color: var(--hl); }
@@ -482,29 +496,49 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const wt = Array.isArray(privat.warten) ? privat.warten : null;
     const hk = hakenStand(), daHs = td.concat(wt || []).map(x => x.h).filter(Boolean), om = offenMerk(), voll = sitz.get("wv-voll") || [];
     if (Object.keys(hk).some(h => !daHs.includes(h))) { Object.keys(hk).forEach(h => { if (!daHs.includes(h)) delete hk[h]; }); lsSet(HAKEN, JSON.stringify(hk)); }
-    const tdZeile = x => { const u = x.f && x.f < tag, j = x.f === tag, an = !!(x.h && hk[x.h]); return '<div class="eintrag todo' + (an ? " erledigt" : "") + (x.h && voll.includes(x.h) ? " voll" : "") + '"' + (x.h ? ' data-h="' + esc(x.h) + '"' : "") + '>' + (x.h ? '<button type="button" class="haken" data-h="' + esc(x.h) + '" aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + "</button>" : "<span></span>") + '<span class="pille ' + (u ? "ueber" : j ? "neu" : "offen") + '">' + esc(u ? "seit " + x.d : j ? "heute" : x.d ? "bis " + x.d : "offen") + "</span><p>" + esc(x.t) + "</p></div>"; };
+    // Format seit 18.11.2026: Haken links, Text an einer Kante, Frist als kleine Zeile darunter. Der Kern des To-dos
+    // (bis zum ersten Komma, Doppelpunkt oder zur ersten Klammer, außerhalb von Klammern, frühestens nach 15 Zeichen) steht fett, der Rest gedämpft.
+    const kern = t => {
+      t = String(t || ""); let tiefe = 0;
+      for (let i = 0; i < t.length; i++) {
+        const c = t[i];
+        if (c === "(") { if (!tiefe && i >= 15 && t[i - 1] === " ") return i <= 110 ? [t.slice(0, i - 1), t.slice(i - 1)] : ["", t]; tiefe++; }
+        else if (c === ")") tiefe = Math.max(0, tiefe - 1);
+        else if (!tiefe && (c === "," || c === ":") && t[i + 1] === " " && i >= 15) return i <= 110 ? [t.slice(0, i), t.slice(i)] : ["", t];
+      }
+      return t.length <= 110 ? [t, ""] : ["", t];
+    };
+    const tdText = t => { const [a, b] = kern(t); return '<p class="td-text">' + (a ? "<b>" + esc(a) + "</b>" : "") + (b ? '<span class="td-rest">' + esc(b) + "</span>" : "") + "</p>"; };
+    const frist = x => { const u = x.f && x.f < tag, j = x.f === tag; return x.f || x.d ? '<p class="td-meta' + (u ? " ueber" : j ? " heute" : "") + '">' + esc(u ? "überfällig seit " + x.d : j ? "heute fällig" : "bis " + x.d) + "</p>" : ""; };
+    const knopf = (h, an, typ) => '<button type="button" class="haken" data-h="' + esc(h) + '"' + (typ ? ' data-typ="' + typ + '"' : "") + ' aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + "</button>";
+    const tdZeile = x => { const an = !!(x.h && hk[x.h]); return '<div class="eintrag todo' + (an ? " erledigt" : "") + (x.h && voll.includes(x.h) ? " voll" : "") + '"' + (x.h ? ' data-h="' + esc(x.h) + '"' : "") + ">" + (x.h ? knopf(x.h, an, "") : '<span class="td-punkt" aria-hidden="true"></span>') + '<div class="td-inhalt">' + tdText(x.t) + frist(x) + "</div></div>"; };
+    // Neue Antworten und Aufgaben aus dem Kalender haben keinen Haken, nur einen Punkt, damit der Text trotzdem an derselben Kante steht
+    const infoZeile = x => '<div class="eintrag todo info"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta' + (x.art === "neu" ? " heute" : "") + '">' + esc(x.art === "neu" ? "neue Antwort" : de(x.label)) + "</p></div></div>";
     // Prio 1 (in OneNote "1!", seit 15.11.2026): sehr wichtig und zeitkritisch, eigener roter Block ganz oben
     // Seit 17.11.2026: Haken von vorher (nach Neuladen oder Ziehen zum Aktualisieren) wandern in den Block "Erledigt",
     // nur gerade eben gesetzte bleiben zum Rückgängigmachen durchgestrichen an ihrer Stelle
     const abgehakt = x => !!(x.h && hk[x.h] && !frischeHaken.has(x.h)), fertig = td.filter(abgehakt), offenListe = td.filter(x => !abgehakt(x));
-    const wtZeile = x => { const an = !!hk[x.h]; return '<div class="eintrag todo' + (an ? " erledigt" : "") + (voll.includes(x.h) ? " voll" : "") + '" data-h="' + esc(x.h) + '"><button type="button" class="haken" data-h="' + esc(x.h) + '" data-typ="warten" aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + '</button><span class="pille offen">' + esc(x.seit ? "seit " + x.seit : "offen") + "</span><p>" + (x.wer ? "<b>" + esc(x.wer) + "</b> " : "") + esc(x.t) + (x.n ? " (" + esc(x.n) + ")" : "") + "</p></div>"; };
+    // Absender fett vorne; steht er schon im Thema (z. B. "Telefonat Leif Schütz"), wird er dort fett statt doppelt
+    const wtText = x => { const t = String(x.t || ""), w = String(x.wer || ""), i = w ? t.indexOf(w) : -1; return i >= 0 ? esc(t.slice(0, i)) + "<b>" + esc(w) + "</b>" + esc(t.slice(i + w.length)) : (w ? "<b>" + esc(w) + "</b> · " : "") + esc(t); };
+    const wtZeile = x => { const an = !!hk[x.h]; return '<div class="eintrag todo' + (an ? " erledigt" : "") + (voll.includes(x.h) ? " voll" : "") + '" data-h="' + esc(x.h) + '">' + knopf(x.h, an, "warten") + '<div class="td-inhalt"><p class="td-text">' + wtText(x) + '</p><p class="td-meta">' + esc((x.seit ? "wartet seit " + x.seit : "offen") + (x.n ? " · " + x.n : "")) + "</p></div></div>"; };
     const wtFertig = wt ? wt.filter(abgehakt) : [], wtSicht = wt ? wt.filter(x => !abgehakt(x)) : [], wtOffen = wt ? wt.filter(x => !hk[x.h]).length : warten.length;
     const fertigHtml = fertig.map(tdZeile).join("") + wtFertig.map(wtZeile).join(""), fertigN = fertig.length + wtFertig.length;
-    const wartenHtml = wt ? wtSicht.map(wtZeile).join("") : warten.map(zeile).join("");
+    const wartenHtml = wt ? wtSicht.map(wtZeile).join("") : warten.map(infoZeile).join("");
     const krit = offenListe.filter(x => x.k), normal = offenListe.filter(x => !x.k);
     const sicht = normal.filter(x => x.f && x.f <= tag).slice(0, 4), rest = normal.filter(x => !sicht.includes(x));
     const offenTd = td.filter(x => !(x.h && hk[x.h]));
     const ueber = offenTd.filter(x => x.f && x.f < tag).length, anzahl = offenTd.length + kalTodo.length;
     ti.textContent = anzahl ? anzahl + " offen" + (ueber ? ", " + ueber + " überfällig" : "") : "";
-    tb.innerHTML = (neu.length + kalTodo.length + td.length ? "" : '<p class="zeile">Nichts offen.</p>') +
-      (krit.length ? '<div class="prio1"><p class="prio1-titel">Prio 1, wichtig und zeitkritisch</p>' + krit.map(tdZeile).join("") + "</div>" : "") +
-      neu.map(zeile).join("") + kalTodo.map(zeile).join("") + sicht.map(tdZeile).join("") +
+    // Seit 18.11.2026 (Gregors Wunsch): "Warten auf Antwort" steht offen ganz oben, darunter Prio 1, dann der Rest
+    tb.innerHTML = (neu.length + kalTodo.length + td.length || wartenHtml ? "" : '<p class="zeile">Nichts offen.</p>') +
+      (wartenHtml ? '<div class="warten-block"><p class="block-titel">Warten auf Antwort (' + wtOffen + ")</p>" + wartenHtml + "</div>" : "") +
+      (krit.length ? '<div class="prio1"><p class="block-titel">Prio 1, wichtig und zeitkritisch</p>' + krit.map(tdZeile).join("") + "</div>" : "") +
+      neu.map(infoZeile).join("") + kalTodo.map(infoZeile).join("") + sicht.map(tdZeile).join("") +
       (rest.length ? '<details class="mehr" data-merk="todos-weitere"' + (om["todos-weitere"] ? " open" : "") + '><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
-      (wartenHtml ? '<details class="mehr" data-merk="todos-warten"' + (om["todos-warten"] ? " open" : "") + '><summary>Warten auf Antwort (' + wtOffen + ")</summary><div class=\"liste-innen\">" + wartenHtml + "</div></details>" : "") +
       (fertigN ? '<details class="mehr erledigt-block" data-merk="todos-erledigt"' + (om["todos-erledigt"] ? " open" : "") + '><summary>Erledigt (' + fertigN + ")</summary><div class=\"liste-innen\">" + fertigHtml + "</div></details>" : "") +
       '<p class="sp-meta" id="k-todos-sync"></p>';
-    tb.querySelectorAll(".eintrag.todo p").forEach(x => x.onclick = () => {
-      const z = x.parentElement, auf = z.classList.toggle("voll"), h = z.dataset.h;
+    tb.querySelectorAll(".eintrag.todo .td-text").forEach(x => x.onclick = () => {
+      const z = x.closest(".eintrag"), auf = z.classList.toggle("voll"), h = z.dataset.h;
       if (h) { const v = (sitz.get("wv-voll") || []).filter(y => y !== h); if (auf) v.push(h); sitz.set("wv-voll", v); }
     });
     tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const typ = b.dataset.typ || "", x = (typ === "warten" ? wt || [] : td).find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true", typ); });
