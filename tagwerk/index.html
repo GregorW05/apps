@@ -1271,6 +1271,25 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (Date.now() - geladenUm > 15 * 60000 && $("z-archiv").selectedIndex <= 0 && !lesen.an) ladeZeitung();
     if (!$("v-heute").hidden) zeichneHeute();
   });
+  // Termine und To-dos frisch halten (seit 22.11.2026, Gregors Wunsch): der Server liest Outlook jede Minute und lädt die App-Daten bei
+  // jeder Änderung hoch. Die App holt heute.json beim Zurückkommen (ab 1 Minute) und alle 2 Minuten, solange die Startseite offen ist,
+  // und tauscht nur den persönlichen Teil aus, damit Zeitung und Vorlesen nicht neu gezeichnet werden. Neue Ausgabe: ganz neu laden.
+  let frischUm = Date.now(), frischLaeuft = false;
+  async function frischHeute() {
+    if (frischLaeuft || !zeitung || document.hidden || $("z-archiv").selectedIndex > 0) return;
+    frischLaeuft = true; frischUm = Date.now();
+    try {
+      const r = await fetch("zeitung/heute.json", { cache: "no-cache" });
+      if (!r.ok) return;
+      const neu = await r.json();
+      if (neu.ausgabe !== zeitung.ausgabe) { if (!lesen.an) await ladeZeitung(); return; }
+      if (JSON.stringify(neu.privat) === JSON.stringify(zeitung.privat)) return;
+      zeitung.privat = neu.privat; zeitung.abgeglichen = neu.abgeglichen; geladenUm = Date.now();
+      if (await entsperren() && !$("v-heute").hidden) zeichneHeute();
+    } catch (e) {} finally { frischLaeuft = false; }
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - frischUm > 60000 && Date.now() - geladenUm <= 15 * 60000) frischHeute(); });
+  setInterval(() => { if (!$("v-heute").hidden) frischHeute(); }, 120000);
   zeige();
   ladeZeitung();
   // Lernen und Essen im Hintergrund vorladen, damit die Zahlen auf der Startseite frisch sind und der Wechsel sofort geht
