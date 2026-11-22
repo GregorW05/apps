@@ -69,6 +69,51 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .karte.essen { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
 .karte.kalender { --akzent: var(--lernen); --soft: var(--lernen-soft); --leiste-farbe: var(--ozean); }
 .karte.spiel { --akzent: var(--essen); --soft: var(--essen-soft); --leiste-farbe: var(--cyan-dunkel); }
+/* Kalender als Stundenraster wie Outlook (seit 22.11.2026): 4 oder 7 Tage ab heute, der ganze Tag ohne Scrollen.
+   Leere Rand- und Nachtstunden schrumpfen zum schraffierten Band, "24 h" zeigt alle Stunden gleich hoch, Antippen zeigt Details. */
+.kal-kopf { display: flex; align-items: center; gap: 6px; }
+.kal-nav { min-width: 34px; min-height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: .85rem; font-weight: 600; line-height: 1; cursor: pointer; display: inline-grid; place-items: center; }
+.kal-nav.pfeil { font-size: 1.3rem; padding: 0 6px 3px; }
+.kal-nav:disabled { opacity: .35; cursor: default; }
+.kal-modus { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.kal-modus button { min-height: 32px; padding: 0 10px; border: 0; background: var(--surface); color: var(--ink); font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.kal-modus button + button { border-left: 1px solid var(--line); }
+.kal-nav[aria-pressed="true"], .kal-modus button[aria-pressed="true"] { background: var(--ozean); border-color: var(--ozean); color: #fff; }
+.kal { --spalten: 4; display: grid; grid-template-columns: 24px repeat(var(--spalten), minmax(0, 1fr)); touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.kal-tag { text-align: center; font-size: .68rem; font-weight: 700; color: var(--muted); line-height: 1.1; padding-bottom: 4px; border-bottom: 1px solid var(--line); min-width: 0; }
+.kal-tag b { display: block; width: 26px; height: 26px; line-height: 26px; margin: 2px auto 0; border-radius: 50%; font-size: .95rem; color: var(--ink); }
+.kal-tag.we { color: color-mix(in srgb, var(--muted) 75%, transparent); }
+.kal-tag.heute { color: var(--hl); }
+.kal-tag.heute b { background: var(--cyan); color: #fff; }
+.kal-ecke { border-bottom: 1px solid var(--line); }
+.kal-gl { font-size: .55rem; color: var(--muted); padding-top: 6px; line-height: 1; }
+.kal-ganz { grid-column: 2 / -1; display: grid; grid-auto-rows: 19px; gap: 2px 0; padding: 3px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.kal-g { min-width: 0; margin: 0 1px; padding: 0 4px; border: 0; border-radius: 3px; background: var(--ozean); color: #fff; font: inherit; font-size: .68rem; font-weight: 600; line-height: 19px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.kal-achse { position: relative; }
+.kal-achse span { position: absolute; right: 4px; font-size: .6rem; color: var(--muted); line-height: 1; transform: translateY(-50%); font-variant-numeric: tabular-nums; pointer-events: none; }
+.falte-l { position: absolute; left: 0; right: 0; border: 0; padding: 0 3px 0 0; background: none; color: var(--muted); font: inherit; font-size: .5rem; font-weight: 600; text-align: right; line-height: 1; white-space: nowrap; cursor: pointer; }
+.kal-spalte { position: relative; border-left: 1px solid var(--line); min-width: 0; }
+.kal-spalte.we { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.kal-spalte.heute { background: color-mix(in srgb, var(--cyan) 7%, transparent); }
+.kal-linie { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid color-mix(in srgb, var(--line) 75%, transparent); pointer-events: none; }
+.kal-falte { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(-45deg, var(--line) 0 1px, transparent 1px 5px); cursor: pointer; }
+.kal-t { position: absolute; z-index: 1; margin: 0 0 0 1px; padding: 2px 3px; border: 0; border-radius: 3px; background: var(--ozean); color: #fff; font: inherit; font-size: .68rem; line-height: 1.2; text-align: left; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start; gap: 1px; cursor: pointer; box-shadow: 0 0 0 1px var(--surface); overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
+.kal-t b { font-weight: 650; }
+.kal-t span { opacity: .85; font-size: .6rem; overflow-wrap: normal; }
+.kal.eng .kal-t { padding: 1px 2px; font-size: .58rem; line-height: 1.15; }
+.kal.eng .kal-g { font-size: .58rem; padding: 0 2px; }
+.kal-t.frei, .kal-g.frei { background: color-mix(in srgb, var(--ozean) 15%, var(--surface)); color: var(--ink); box-shadow: inset 2px 0 0 var(--ozean), 0 0 0 1px var(--surface); }
+.kal-t.vorbehalt, .kal-g.vorbehalt { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ozean) 24%, var(--surface)) 0 4px, var(--surface) 4px 8px); color: var(--ink); box-shadow: inset 2px 0 0 var(--ozean), 0 0 0 1px var(--surface); }
+.kal-t.vorbei { opacity: .45; }
+.kal-t.sel, .kal-g.sel { outline: 2px solid var(--cyan); outline-offset: 1px; z-index: 3; }
+.kal-jetzt { position: absolute; left: 0; right: 0; z-index: 4; height: 0; border-top: 2px solid var(--rot); pointer-events: none; }
+.kal-jetzt::before { content: ""; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--rot); }
+.kal-detail { display: grid; gap: 2px; padding: 8px 10px; border-left: 3px solid var(--cyan); background: var(--soft); border-radius: 4px; font-size: .92rem; line-height: 1.35; }
+.kal-detail b { font-weight: 650; }
+.kal-detail span { color: var(--muted); font-size: .85rem; }
+html.laptop .kal { grid-template-columns: 32px repeat(var(--spalten), minmax(0, 1fr)); }
+html.laptop .kal-t { font-size: .78rem; padding: 3px 5px; } html.laptop .kal-t span { font-size: .7rem; }
+html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78rem; } html.laptop .kal-achse span { font-size: .7rem; }
 .liste { display: grid; gap: 10px; }
 .reihe.drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .reihe.drei .knopf { justify-self: stretch; padding: 0 4px; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -254,9 +299,8 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
 /* Laptop-Ansicht (seit 15.11.2026): automatisch ab 1000 px Breite, erzwingbar mit ?ansicht=laptop oder ?ansicht=handy.
    Leiste oben, Startseite zweispaltig, Zeitung als breitere Lesespalte */
 html.laptop .ansicht { max-width: 1180px; padding-block: calc(var(--leiste) + 28px) 48px; }
-html.laptop #v-heute { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); grid-template-areas: "kopf kopf" "zeitung kalender" "zeitung todos" "spiel todos" "spiel einst" "fuss fuss"; align-items: start; column-gap: 24px; }
+html.laptop #v-heute { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: "kopf kopf" "kalender todos" "spiel todos" "spiel einst" "fuss fuss"; align-items: start; column-gap: 24px; }
 html.laptop #v-heute > header { grid-area: kopf; }
-html.laptop #v-heute > .karte.zeitung { grid-area: zeitung; }
 html.laptop #v-heute > .karte.kalender { grid-area: kalender; }
 html.laptop #v-heute > .karte.todos { grid-area: todos; }
 html.laptop #v-heute > .karte.spiel { grid-area: spiel; }
@@ -294,14 +338,18 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     <p class="wetter" id="wetter-kurz"></p>
   </header>
 
-  <section class="karte zeitung" aria-labelledby="k-zeitung">
-    <h2 id="k-zeitung">Zeitung <span id="k-zeitung-nr"></span></h2>
-    <ul class="schlagzeilen" id="k-schlagzeilen"><li>Lädt die Ausgabe</li></ul>
-    <div class="reihe drei"><a class="knopf" href="#zeitung">Zeitung lesen</a><button class="knopf leise" type="button" id="k-anhoeren">Anhören</button><a class="knopf leise" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen</a></div>
-  </section>
-
+  <!-- Zeitung seit 22.11.2026 nicht mehr auf der Startseite (Gregors Wunsch), nur noch im Reiter Zeitung -->
   <section class="karte kalender" aria-labelledby="k-kalender">
     <h2 id="k-kalender">Kalender <span id="k-kalender-info"></span></h2>
+    <div class="kal-kopf" id="kal-kopf" hidden>
+      <button type="button" class="kal-nav pfeil" id="kal-zurueck" aria-label="Frühere Tage">‹</button>
+      <button type="button" class="kal-nav" id="kal-heute">Heute</button>
+      <button type="button" class="kal-nav pfeil" id="kal-vor" aria-label="Spätere Tage">›</button>
+      <div class="kal-modus" role="group" aria-label="Zeitraum"><button type="button" data-m="4" aria-pressed="false">4 Tage</button><button type="button" data-m="7" aria-pressed="false">7 Tage</button></div>
+      <button type="button" class="kal-nav" id="kal-24" aria-pressed="false" title="Alle Stunden gleich hoch">24 h</button>
+    </div>
+    <div class="kal" id="k-raster" hidden></div>
+    <div class="kal-detail" id="kal-detail" role="status" hidden></div>
     <div class="liste" id="k-termine"><p class="zeile">Lädt</p></div>
   </section>
 
@@ -460,18 +508,153 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   let raetselGestartet = false;
   function zeichneZeitungKarte() {
     if (!zeitung) return;
-    $("k-zeitung-nr").textContent = "Ausgabe " + zeitung.ausgabe + (zeitung.datum !== heuteISO() ? " vom " + zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + "." : "");
-    const titel = laptop ? zeitung.ressorts.flatMap(r => r.meldungen.map(m => m.titel)).slice(0, 10) : zeitung.kurz;
-    $("k-schlagzeilen").innerHTML = titel.map(t => "<li>" + esc(t) + "</li>").join("");
     $("wetter-kurz").innerHTML = zeitung.wetter ? "<span>" + esc(zeitung.wetter) + "</span>" + (zeitung.sonne ? "<span>" + esc(zeitung.sonne) + "</span>" : "") : "";
     zeichneKalender();
   }
+  // ---------- Kalender als Stundenraster wie Outlook (seit 22.11.2026, Gregors Wunsch) ----------
+  // 4 oder 7 Tage ab heute, der ganze Tag auf einen Blick ohne Scrollen: Stunden mit Terminen (mindestens 8 bis 20 Uhr) voll hoch,
+  // leere Rand- und Nachtstunden als schraffiertes Band (wie früher "Morgen- und Nachtstunden ausblenden" bei Google Calendar),
+  // "24 h" zeigt alle Stunden gleich hoch. Antippen zeigt die Details, Wischen oder die Pfeile blättern.
+  // Daten: kalender.ps1 liest Outlook auf dem Server, export_app.py legt sie verschlüsselt in privat.kalender (Montag dieser Woche bis +28 Tage).
+  const WTK = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const kalDatum = s => { const p = String(s).split(/[-T:]/).map(Number); return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0); };
+  const zwei = n => (n < 10 ? "0" : "") + n;
+  const uhr = d => zwei(d.getHours()) + ":" + zwei(d.getMinutes());
+  const tagKurz = d => WTK[d.getDay()] + " " + d.getDate() + "." + (d.getMonth() + 1) + ".";
+  const mitternacht = (d, plus) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + (plus || 0));
+  const kalArt = x => x.b === 0 ? " frei" : x.b === 1 ? " vorbehalt" : "";
+  const kalZeit = x => {
+    const tagE = mitternacht(x.e) < x.e ? mitternacht(x.e) : mitternacht(x.e, -1);
+    if (x.g) return +mitternacht(x.s) >= +tagE ? tagKurz(x.s) + " · ganztägig" : tagKurz(x.s) + " bis " + tagKurz(tagE) + " · ganztägig";
+    return +mitternacht(x.s) === +mitternacht(x.e) || +x.e === +mitternacht(x.s, 1) ? tagKurz(x.s) + " · " + uhr(x.s) + " bis " + uhr(x.e) : tagKurz(x.s) + " " + uhr(x.s) + " bis " + tagKurz(x.e) + " " + uhr(x.e);
+  };
+  const kalModus = () => { const m = lsGet("wv-kal-modus"); return m === "4" || m === "7" ? +m : (laptop ? 7 : 4); };
+  let kalWahl = -1;
+  function kalGrenzen(N) {
+    const h0 = mitternacht(new Date()), mo = mitternacht(h0, -((h0.getDay() + 6) % 7));
+    return [Math.round((mo - h0) / 864e5), 28 - N];
+  }
+  function kalSchieben(r) {
+    const N = kalModus(), [lo, hi] = kalGrenzen(N);
+    sitz.set("wv-kal-versatz", r ? Math.max(lo, Math.min(hi, (sitz.get("wv-kal-versatz") || 0) + r * N)) : 0);
+    kalWahl = -1; zeichneRaster();
+  }
+  function zeichneRaster() {
+    const kal = privat && privat.kalender, rb = $("k-raster"), kb = $("k-termine"), ki = $("k-kalender-info"), det = $("kal-detail");
+    if (!kal || !Array.isArray(kal.termine)) return false;
+    const N = kalModus(), eng = N === 7 && !laptop, voll = !!sitz.get("wv-kal-voll"), jetzt = new Date(), h0 = mitternacht(jetzt);
+    const [lo, hi] = kalGrenzen(N), v = Math.max(lo, Math.min(hi, sitz.get("wv-kal-versatz") || 0));
+    const tage = Array.from({ length: N }, (_, i) => mitternacht(h0, v + i)), ende = mitternacht(tage[0], N);
+    const alle = kal.termine.map((x, i) => ({ i, t: String(x.t || "").trim() || "(ohne Titel)", o: x.o || "", g: !!x.g, b: x.b, s: kalDatum(x.s), e: kalDatum(x.e) }));
+    const sicht = alle.filter(x => x.e > tage[0] && x.s < ende || (+x.s === +x.e && x.s >= tage[0] && x.s < ende));
+    const ganz = sicht.filter(x => x.g), zeitl = sicht.filter(x => !x.g);
+    // Zeitliche Termine je Tag zerschneiden (über Mitternacht), Minuten ab 0 Uhr, mindestens 15 Minuten
+    const seg = tage.map((d, c) => zeitl.map(x => {
+      const a = Math.max(+x.s, +d), b = Math.min(+x.e, +mitternacht(d, 1));
+      if (b <= a && !(+x.s === +x.e && x.s >= d && x.s < mitternacht(d, 1))) return null;
+      const am = (a - d) / 6e4; return { x, a: am, b: Math.max((b - d) / 6e4, am + 15) };
+    }).filter(Boolean));
+    // Kernzeit: mindestens 8 bis 20 Uhr, erweitert um alle Termine der sichtbaren Tage; der Rest schrumpft zum Band
+    let vonH = 8, bisH = 20;
+    seg.flat().forEach(s => { vonH = Math.min(vonH, Math.floor(s.a / 60)); bisH = Math.max(bisH, Math.ceil(s.b / 60)); });
+    if (voll) { vonH = 0; bisH = 24; }
+    vonH = Math.max(0, vonH); bisH = Math.min(24, bisH);
+    const F = 14, ziel = (laptop ? 430 : 264) * (voll ? 1.5 : 1);
+    const hp = Math.max(16, Math.min(laptop ? 44 : 34, Math.round(ziel / (bisH - vonH))));
+    const oben = vonH > 0 ? F : 0, unten = bisH < 24 ? F : 0, kern = (bisH - vonH) * hp, H = oben + kern + unten;
+    const y = m => m <= vonH * 60 ? (vonH ? m / (vonH * 60) * oben : 0) : m >= bisH * 60 ? oben + kern + (bisH < 24 ? (m - bisH * 60) / ((24 - bisH) * 60) * unten : 0) : oben + (m - vonH * 60) / 60 * hp;
+    // Überschneidungen: Spuren nebeneinander wie in Outlook
+    const spuren = liste => {
+      liste.sort((p, q) => p.a - q.a || q.b - p.b);
+      let gruppe = [], gEnde = -1;
+      const fertig = () => { const n = Math.max(...gruppe.map(s => s.l)) + 1; gruppe.forEach(s => { s.n = n; }); gruppe = []; };
+      liste.forEach(s => {
+        if (gruppe.length && s.a >= gEnde) { fertig(); gEnde = -1; }
+        const belegt = gruppe.filter(g => g.b > s.a).map(g => g.l);
+        let l = 0; while (belegt.includes(l)) l++;
+        s.l = l; gruppe.push(s); gEnde = Math.max(gEnde, s.b);
+      });
+      if (gruppe.length) fertig();
+    };
+    const we = d => d.getDay() === 0 || d.getDay() === 6;
+    let h = '<div class="kal-ecke"></div>' + tage.map(d => '<div class="kal-tag' + (+d === +h0 ? " heute" : "") + (we(d) ? " we" : "") + '">' + WTK[d.getDay()] + "<b>" + d.getDate() + "</b></div>").join("");
+    if (ganz.length) {
+      const bahnen = [];
+      const chips = ganz.map(x => {
+        const tagE = mitternacht(x.e) < x.e ? mitternacht(x.e, 1) : mitternacht(x.e);
+        const c0 = Math.max(0, Math.round((mitternacht(x.s) - tage[0]) / 864e5)), c1 = Math.min(N - 1, Math.max(c0, Math.round((tagE - tage[0]) / 864e5) - 1));
+        let l = 0; while ((bahnen[l] || []).some(r => !(c1 < r[0] || c0 > r[1]))) l++;
+        (bahnen[l] = bahnen[l] || []).push([c0, c1]);
+        return '<button type="button" class="kal-g' + kalArt(x) + (x.i === kalWahl ? " sel" : "") + '" data-i="' + x.i + '" style="grid-column:' + (c0 + 1) + " / " + (c1 + 2) + ";grid-row:" + (l + 1) + '" aria-label="' + esc(x.t + ", " + kalZeit(x)) + '">' + esc(x.t) + "</button>";
+      });
+      h += '<div class="kal-ecke kal-gl">ganzt.</div><div class="kal-ganz" style="grid-template-columns:repeat(' + N + ',minmax(0,1fr))">' + chips.join("") + "</div>";
+    }
+    const schritt = hp < 20 ? 2 : 1;
+    let achse = "";
+    for (let s = vonH; s <= bisH; s++) if (s > 0 && s < 24 && s !== vonH && s !== bisH && (s - vonH) % schritt === 0) achse += '<span style="top:' + Math.max(6, y(s * 60)).toFixed(1) + 'px">' + s + "</span>";
+    if (oben) achse += '<button type="button" class="falte-l" style="top:0;height:' + oben + 'px" aria-label="Ganzen Tag zeigen">0–' + vonH + "</button>";
+    if (unten) achse += '<button type="button" class="falte-l" style="top:' + (H - unten) + "px;height:" + unten + 'px" aria-label="Ganzen Tag zeigen">' + bisH + "–24</button>";
+    h += '<div class="kal-achse" style="height:' + H + 'px">' + achse + "</div>";
+    let linien = ""; for (let s = vonH; s <= bisH; s++) if (s > 0 && s < 24) linien += '<i class="kal-linie" style="top:' + y(s * 60).toFixed(1) + 'px"></i>';
+    const falten = (oben ? '<i class="kal-falte" style="top:0;height:' + oben + 'px"></i>' : "") + (unten ? '<i class="kal-falte" style="top:' + (H - unten) + "px;height:" + unten + 'px"></i>' : "");
+    const jetztM = (jetzt - h0) / 6e4;
+    tage.forEach((d, c) => {
+      spuren(seg[c]);
+      const heute = +d === +h0;
+      h += '<div class="kal-spalte' + (heute ? " heute" : "") + (we(d) ? " we" : "") + '" style="height:' + H + 'px">' + linien + falten +
+        seg[c].map(s => {
+          const top = y(s.a), hh = Math.max(y(s.b) - top, 13);
+          const zeitZeile = hh >= 30 && !eng ? "<span>" + uhr(s.x.s) + (s.x.e - s.x.s >= 36e5 ? " bis " + uhr(s.x.e) : "") + "</span>" : "";
+          return '<button type="button" class="kal-t' + kalArt(s.x) + (s.x.e <= jetzt ? " vorbei" : "") + (s.x.i === kalWahl ? " sel" : "") + '" data-i="' + s.x.i + '" style="top:' + top.toFixed(1) + "px;height:" + (hh - 1).toFixed(1) + "px;left:" + (s.l / s.n * 100).toFixed(2) + "%;width:calc(" + (100 / s.n).toFixed(2) + '% - 2px)" aria-label="' + esc(s.x.t + ", " + kalZeit(s.x)) + '"><b>' + esc(s.x.t) + "</b>" + zeitZeile + "</button>";
+        }).join("") +
+        (heute ? '<i class="kal-jetzt" style="top:' + y(jetztM).toFixed(1) + 'px"></i>' : "") + "</div>";
+    });
+    rb.style.setProperty("--spalten", N);
+    rb.classList.toggle("eng", eng);
+    rb.innerHTML = h; rb.hidden = false; $("kal-kopf").hidden = false;
+    // Kopfzeile: Blättern, Zeitraum, 24 h
+    $("kal-zurueck").disabled = v <= lo; $("kal-vor").disabled = v >= hi; $("kal-heute").disabled = v === 0;
+    document.querySelectorAll(".kal-modus button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.m === N)));
+    $("kal-24").setAttribute("aria-pressed", String(voll));
+    // Details zum angetippten Termin
+    const w = alle.find(x => x.i === kalWahl);
+    det.hidden = !w;
+    det.innerHTML = w ? "<b>" + esc(w.t) + "</b><span>" + esc(kalZeit(w)) + (w.b === 0 ? " · frei" : w.b === 1 ? " · mit Vorbehalt" : "") + "</span>" + (w.o ? "<span>" + esc(w.o) + "</span>" : "") : "";
+    // Kopf der Karte: was gerade läuft oder als Nächstes kommt
+    const zt = alle.filter(x => !x.g), laeuft = zt.find(x => x.s <= jetzt && x.e > jetzt), naechst = zt.filter(x => x.s > jetzt).sort((p, q) => p.s - q.s)[0];
+    const wann = d => +mitternacht(d) === +h0 ? "" : +mitternacht(d) === +mitternacht(h0, 1) ? "morgen " : WTK[d.getDay()] + " ";
+    ki.textContent = laeuft ? "jetzt bis " + uhr(laeuft.e) : naechst ? "als Nächstes " + wann(naechst.s) + uhr(naechst.s) : "nichts geplant";
+    const st = kal.stand ? new Date(kal.stand) : null;
+    kb.innerHTML = st && !isNaN(st) ? '<p class="sp-meta">Aus Outlook, Stand ' + (+mitternacht(st) !== +h0 ? st.getDate() + "." + (st.getMonth() + 1) + ". " : "") + uhr(st) + "</p>" : "";
+    return true;
+  }
+  $("k-raster").addEventListener("click", e => {
+    if (e.target.closest(".falte-l, .kal-falte")) { sitz.set("wv-kal-voll", !sitz.get("wv-kal-voll")); zeichneRaster(); return; }
+    const b = e.target.closest("[data-i]");
+    if (!b) { if (kalWahl !== -1) { kalWahl = -1; zeichneRaster(); } return; }
+    kalWahl = kalWahl === +b.dataset.i ? -1 : +b.dataset.i; zeichneRaster();
+  });
+  $("kal-zurueck").onclick = () => kalSchieben(-1);
+  $("kal-vor").onclick = () => kalSchieben(1);
+  $("kal-heute").onclick = () => kalSchieben(0);
+  $("kal-24").onclick = () => { sitz.set("wv-kal-voll", !sitz.get("wv-kal-voll")); zeichneRaster(); };
+  document.querySelectorAll(".kal-modus button").forEach(b => { b.onclick = () => { lsSet("wv-kal-modus", b.dataset.m); sitz.set("wv-kal-versatz", 0); kalWahl = -1; zeichneRaster(); }; });
+  (function () {
+    // Wischen nach links oder rechts blättert (senkrecht bleibt Scrollen und Ziehen zum Aktualisieren)
+    let sx = 0, sy = 0, an = false;
+    const r = $("k-raster");
+    r.addEventListener("touchstart", e => { an = e.touches.length === 1; if (an) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
+    r.addEventListener("touchend", e => { if (!an) return; an = false; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) kalSchieben(dx < 0 ? 1 : -1); }, { passive: true });
+  })();
+  // Linie "jetzt" und vergangene Termine alle 5 Minuten nachziehen
+  setInterval(() => { if (!document.hidden && !$("v-heute").hidden && privat) zeichneRaster(); }, 300000);
   // Kalender: Termine, neue Antworten und offene Punkte aus dem verschlüsselten Teil (Routine aktualisiert alle 3 Stunden)
   // Seit 15.11.2026 getrennt: Kalender = echte Termine, To-dos = OneNote-Liste, Aufgaben aus dem Kalender, neue Antworten, Warten auf Antwort
   function zeichneKalender() {
     const kb = $("k-termine"), tb = $("k-todos"), ki = $("k-kalender-info"), ti = $("k-todos-info");
     if (!zeitung) return;
     if (!privat) {
+      $("k-raster").hidden = $("kal-kopf").hidden = $("kal-detail").hidden = true;
       ki.textContent = ""; ti.textContent = "";
       kb.innerHTML = tb.innerHTML = '<p class="zeile">' + (lsGet(KEY) === null ? "Gesperrt. Öffne die App über deinen persönlichen Link oder füge den Schlüssel unter Einstellungen ein." : "Der gespeicherte Schlüssel passt nicht zu dieser Ausgabe.") + "</p>";
       return;
@@ -486,9 +669,13 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const kalTodo = privat.eintraege.filter(istTodo).map(x => Object.assign({}, x, { art: "offen", label: x.art === "termin" ? de(x.label) : "To-do" }));
     const neu = privat.eintraege.filter(x => x.art === "neu"), warten = privat.eintraege.filter(x => x.art === "offen" && !istTodo(x));
     const stand = zeitung.erstellt ? new Date(zeitung.erstellt) : null;
-    ki.textContent = termine.length ? termine.length + (termine.length === 1 ? " Termin" : " Termine") : "keine Termine";
-    kb.innerHTML = (termine.length ? termine.map(zeile).join("") : '<p class="zeile">Heute keine Termine.</p>') +
-      (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
+    // Seit 22.11.2026 Stundenraster aus dem Outlook-Kalender (privat.kalender), sonst wie vorher die Termine aus der Zeitung als Liste
+    if (!zeichneRaster()) {
+      $("k-raster").hidden = $("kal-kopf").hidden = $("kal-detail").hidden = true;
+      ki.textContent = termine.length ? termine.length + (termine.length === 1 ? " Termin" : " Termine") : "keine Termine";
+      kb.innerHTML = (termine.length ? termine.map(zeile).join("") : '<p class="zeile">Heute keine Termine.</p>') +
+        (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
+    }
     // To-dos aus Gregors OneNote-Liste (export_app.py), überfällige und heutige oben, der Rest ausklappbar
     const td = Array.isArray(privat.todos) ? privat.todos : [], tag = heuteISO();
     // Haken (seit 15.11.2026): abgehakte bleiben durchgestrichen stehen, bis der Server sie in OneNote gesetzt hat und sie aus der Liste fallen
@@ -646,7 +833,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       if (!r.ok) throw new Error(r.status);
       zeitung = await r.json(); if (!datei) geladenUm = Date.now();
     } catch (e) {
-      if (!zeitung) { $("k-schlagzeilen").innerHTML = "<li>Keine Verbindung. Die Zeitung lädt, sobald du wieder online bist.</li>"; $("z-inhalt").innerHTML = "<p>Keine Verbindung.</p>"; }
+      if (!zeitung) { $("k-termine").innerHTML = '<p class="zeile">Keine Verbindung. Termine und To-dos laden, sobald du wieder online bist.</p>'; $("z-inhalt").innerHTML = "<p>Keine Verbindung.</p>"; }
       return;
     }
     privat = null;
@@ -789,7 +976,6 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     });
   }
   function leseLeiste() {
-    $("k-anhoeren").textContent = lesen.an ? "Stopp" : "Anhören";
     $("mini-icon").innerHTML = lesen.pause ? '<path d="M8 5.5v13l11-6.5z"/>' : '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
     $("mini-play").setAttribute("aria-label", lesen.pause ? "Weiter" : "Pause");
     $("z-tempo").value = String(tempo);
@@ -963,7 +1149,6 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (istAudio()) { spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo; }
     else { anhalten(); lesen.lauf++; spiele(lesen.lauf); }
   };
-  $("k-anhoeren").onclick = () => { if (lesen.an) stopp(); else vorlesen(); };
   if (TTS) TTS.getVoices();
   leseLeiste();
 
