@@ -177,39 +177,39 @@
   }
 
   // ---------- Zahlenziel: aus sechs Zahlen mit + − × ÷ genau das Ziel treffen ----------
+  // Seit 24.11.2026 leichter (Gregor: zu schwer): Lösung mit genau drei Zahlen, nur + − ×, Ziel 20 bis 150, eine größere Zahl (10, 25 oder 50).
+  // Vorher vier bis fünf Zahlen, auch ÷, Ziel bis 999. Dazu ein Tipp-Knopf (erst die drei Zahlen, dann der erste Schritt).
   function zahlenAufgabe(rnd) {
-    for (let v = 0; v < 400; v++) {
-      const g = [25, 50, 75, 100], k = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], pool = [];
-      const nG = 1 + Math.floor(rnd() * 2);
-      for (let i = 0; i < nG; i++) pool.push(g.splice(Math.floor(rnd() * g.length), 1)[0]);
+    for (let v = 0; v < 600; v++) {
+      const g = [10, 25, 50], k = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 2, 3, 4, 5, 6, 7, 8, 9], pool = [g[Math.floor(rnd() * g.length)]];
       while (pool.length < 6) pool.push(k.splice(Math.floor(rnd() * k.length), 1)[0]);
-      let w = mische(pool.map(x => ({ v: x, t: String(x) })), rnd).slice(0, 4 + Math.floor(rnd() * 2));
+      const w = mische(pool.map(x => ({ v: x, t: String(x) })), rnd).slice(0, 3), benutzt = w.map(x => x.v), schritte = [];
       while (w.length > 1) {
         const a = w.splice(Math.floor(rnd() * w.length), 1)[0], b = w.splice(Math.floor(rnd() * w.length), 1)[0], ops = [];
-        ops.push({ v: a.v + b.v, t: "(" + a.t + " + " + b.t + ")" });
-        if (a.v > 1 && b.v > 1 && a.v * b.v <= 3000) ops.push({ v: a.v * b.v, t: "(" + a.t + " × " + b.t + ")" }, { v: a.v * b.v, t: "(" + a.t + " × " + b.t + ")" });
-        if (a.v !== b.v) { const [x, y] = a.v > b.v ? [a, b] : [b, a]; ops.push({ v: x.v - y.v, t: "(" + x.t + " − " + y.t + ")" }); }
-        if (b.v > 1 && a.v % b.v === 0) ops.push({ v: a.v / b.v, t: "(" + a.t + " ÷ " + b.t + ")" });
-        if (a.v > 1 && b.v % a.v === 0) ops.push({ v: b.v / a.v, t: "(" + b.t + " ÷ " + a.t + ")" });
-        w.push(ops[Math.floor(rnd() * ops.length)]);
+        ops.push({ v: a.v + b.v, t: "(" + a.t + " + " + b.t + ")", s: a.v + " + " + b.v + " = " + (a.v + b.v) });
+        if (a.v > 1 && b.v > 1 && a.v * b.v <= 200) { const s = a.v + " × " + b.v + " = " + a.v * b.v; ops.push({ v: a.v * b.v, t: "(" + a.t + " × " + b.t + ")", s }, { v: a.v * b.v, t: "(" + a.t + " × " + b.t + ")", s }); }
+        if (a.v !== b.v) { const [x, y] = a.v > b.v ? [a, b] : [b, a]; ops.push({ v: x.v - y.v, t: "(" + x.t + " − " + y.t + ")", s: x.v + " − " + y.v + " = " + (x.v - y.v) }); }
+        const o = ops[Math.floor(rnd() * ops.length)];
+        schritte.push(o.s); w.push({ v: o.v, t: o.t });
       }
       const z = w[0];
-      if (z.v >= 101 && z.v <= 999 && z.v % 100 !== 0) return { zahlen: mische(pool, rnd), ziel: z.v, weg: z.t.replace(/^\((.*)\)$/, "$1") };
+      if (z.v >= 20 && z.v <= 150 && !pool.includes(z.v)) return { zahlen: mische(pool, rnd), ziel: z.v, weg: z.t.replace(/^\((.*)\)$/, "$1"), schritte, benutzt };
     }
-    return { zahlen: [100, 25, 8, 6, 3, 2], ziel: 853, weg: "100 × 8 + 25 × 2 + 3" };
+    return { zahlen: [25, 4, 7, 3, 2, 9], ziel: 107, weg: "25 × 4 + 7", schritte: ["25 × 4 = 100", "100 + 7 = 107"], benutzt: [25, 4, 7] };
   }
   function zahlen(box, rnd, fertig) {
     const A = zahlenAufgabe(rnd);
-    let kacheln, verlauf, sel, op, vorbei = false, gezeigt = false, start = 0;
+    let kacheln, verlauf, sel, op, vorbei = false, gezeigt = false, start = 0, tipp = 0;
     const neu = () => { kacheln = A.zahlen.map((v, i) => ({ v, id: "z" + i })); verlauf = []; sel = null; op = null; };
     neu();
     function zeichne(msg) {
-      let h = '<p class="sp-text">Triff mit den Zahlen genau das Ziel. Jede Zahl höchstens einmal, nur + − × ÷ mit ganzen Zahlen.</p>';
+      let h = '<p class="sp-text">Triff mit den Zahlen genau das Ziel. Drei Zahlen reichen, jede höchstens einmal.</p>';
       h += '<p class="sp-ziel">Ziel <b>' + A.ziel + "</b></p><div class=\"kacheln\">";
       kacheln.forEach(k => { h += '<button type="button" class="kachel' + (sel === k.id ? " sel" : "") + (k.v === A.ziel ? " treffer" : "") + '" data-k="' + k.id + '">' + fmt(k.v) + "</button>"; });
       h += '</div><div class="ops">' + ["+", "−", "×", "÷"].map(o => '<button type="button" data-o="' + o + '" class="' + (op === o ? "an" : "") + '" aria-pressed="' + (op === o) + '">' + o + "</button>").join("") + "</div>";
       h += '<p class="sp-meta" role="status">' + esc(msg || (vorbei ? "" : "Zahl, Rechenzeichen, Zahl.")) + "</p>";
-      h += '<div class="reihe"><button class="knopf leise" type="button" data-a="zurueck">Zurück</button><button class="knopf leise" type="button" data-a="neu">Neu starten</button>' + (vorbei ? "" : '<button class="knopf leise" type="button" data-a="lsg">Lösung zeigen</button>') + "</div>";
+      h += '<div class="reihe"><button class="knopf leise" type="button" data-a="zurueck">Zurück</button><button class="knopf leise" type="button" data-a="neu">Neu starten</button>' + (vorbei ? "" : (tipp < 2 ? '<button class="knopf leise" type="button" data-a="tipp">Tipp</button>' : "") + '<button class="knopf leise" type="button" data-a="lsg">Lösung zeigen</button>') + "</div>";
+      if (tipp >= 1 && !gezeigt) h += '<p class="sp-text">Tipp: Du brauchst <b>' + A.benutzt.join(", ") + "</b>." + (tipp >= 2 && A.schritte.length ? " Erster Schritt: <b>" + esc(A.schritte[0]) + "</b>." : "") + "</p>";
       if (gezeigt) h += '<p class="sp-text">Ein Weg: <b>' + esc(A.weg) + " = " + A.ziel + "</b></p>";
       box.innerHTML = h;
       box.querySelectorAll(".kachel").forEach(b => b.onclick = () => wähle(b.dataset.k));
@@ -217,6 +217,7 @@
       box.querySelector('[data-a="zurueck"]').onclick = () => { const v = verlauf.pop(); if (v) { kacheln = v; sel = null; op = null; vorbei = false; zeichne(); } };
       box.querySelector('[data-a="neu"]').onclick = () => { neu(); vorbei = false; zeichne(); };
       const l = box.querySelector('[data-a="lsg"]'); if (l) l.onclick = () => { gezeigt = true; vorbei = true; zeichne(); };
+      const tp = box.querySelector('[data-a="tipp"]'); if (tp) tp.onclick = () => { tipp++; zeichne(); };
       if (vorbei && !gezeigt) erfolg(box, "Genau " + A.ziel + ". Gelöst" + (start ? " in " + zeit(Date.now() - start) : "") + ".");
     }
     function wähle(id) {

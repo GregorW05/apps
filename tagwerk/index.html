@@ -178,6 +178,19 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .post-wisch.weg { animation: post-weg .38s ease-in forwards; pointer-events: none; }
 .post-wisch.weg > .post-zeile { transform: translate3d(-100%, 0, 0) !important; transition: transform .2s ease-in; }
 .post-wisch[data-seite="l"].weg > .post-zeile { transform: translate3d(100%, 0, 0) !important; }
+/* To-dos wischen (seit 24.11.2026): Heute mit Prio 1, Morgen, Tag (Leiste) */
+.todo-wisch > .post-zeile { padding: 2px 8px; }
+.prio1 .todo-wisch > .post-zeile { background: color-mix(in srgb, var(--rot) 8%, var(--surface)); }
+.pa[data-was="heute"] { background: var(--rot); } .pa[data-was="morgen"] { background: var(--cyan-dunkel); } .pa[data-was="tag"] { background: var(--ozean); }
+.frist-leiste { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; margin: -4px 0 2px 38px; scroll-snap-type: x proximity; touch-action: pan-x; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.frist-leiste::-webkit-scrollbar { display: none; }
+.frist-leiste button, .frist-leiste .fl-kal { position: relative; flex: none; min-width: 58px; min-height: 50px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+  display: grid; place-content: center; justify-items: center; gap: 1px; font: inherit; font-size: .74rem; line-height: 1.15; color: var(--muted); cursor: pointer; scroll-snap-align: start; -webkit-tap-highlight-color: transparent; }
+.frist-leiste b { font-size: .88rem; color: var(--ink); font-weight: 650; }
+.frist-leiste .we { background: var(--surface-2); }
+.frist-leiste .jetzt { border-color: var(--hl); box-shadow: inset 0 0 0 1px var(--hl); }
+.frist-leiste button:active, .frist-leiste .fl-kal:active { transform: scale(.96); }
+.fl-kal input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 .liste h3.gruppe { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
@@ -793,7 +806,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         (stand && !isNaN(stand) ? '<p class="sp-meta">Stand ' + (zeitung.datum !== heuteISO() ? zeitung.datum.slice(8, 10) + "." + zeitung.datum.slice(5, 7) + ". " : "") + stand.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }) + ", wird alle 3 Stunden erneuert</p>" : "");
     }
     // To-dos aus Gregors OneNote-Liste (export_app.py), überfällige und heutige oben, der Rest ausklappbar
-    const td = Array.isArray(privat.todos) ? privat.todos : [], tag = heuteISO();
+    const td = Array.isArray(privat.todos) ? fristLokal(privat.todos) : [], tag = heuteISO();
     // Haken (seit 15.11.2026): abgehakte bleiben durchgestrichen stehen, bis der Server sie in OneNote gesetzt hat und sie aus der Liste fallen
     // Warten auf Antwort (seit 17.11.2026): direkt aus warte-auf.md mit Haken, sonst wie vorher die offenen Punkte aus der Zeitung
     const wt = Array.isArray(privat.warten) ? privat.warten : null;
@@ -814,7 +827,13 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const tdText = t => { const [a, b] = kern(t); return '<p class="td-text">' + (a ? "<b>" + esc(a) + "</b>" : "") + (b ? '<span class="td-rest">' + esc(b) + "</span>" : "") + "</p>"; };
     const frist = x => { const u = x.f && x.f < tag, j = x.f === tag; return x.f || x.d ? '<p class="td-meta' + (u ? " ueber" : j ? " heute" : "") + '">' + esc(u ? "überfällig seit " + x.d : j ? "heute fällig" : "bis " + x.d) + "</p>" : ""; };
     const knopf = (h, an, typ) => '<button type="button" class="haken" data-h="' + esc(h) + '"' + (typ ? ' data-typ="' + typ + '"' : "") + ' aria-pressed="' + an + '" aria-label="' + (an ? "Wieder offen" : "Erledigt") + '">' + (an ? "✓" : "") + "</button>";
-    const tdZeile = x => { const an = !!(x.h && hk[x.h]); return '<div class="eintrag todo' + (an ? " erledigt" : "") + (x.h && voll.includes(x.h) ? " voll" : "") + '"' + (x.h ? ' data-h="' + esc(x.h) + '"' : "") + ">" + (x.h ? knopf(x.h, an, "") : '<span class="td-punkt" aria-hidden="true"></span>') + '<div class="td-inhalt">' + tdText(x.t) + frist(x) + "</div></div>"; };
+    const tdZeile = x => {
+      const an = !!(x.h && hk[x.h]), wisch = !!(x.h && !an);
+      const zeile = '<div class="eintrag todo' + (wisch ? " post-zeile" : "") + (an ? " erledigt" : "") + (x.h && voll.includes(x.h) ? " voll" : "") + '"' + (x.h ? ' data-h="' + esc(x.h) + '"' : "") + ">" + (x.h ? knopf(x.h, an, "") : '<span class="td-punkt" aria-hidden="true"></span>') + '<div class="td-inhalt">' + tdText(x.t) + frist(x) + (x.lokal ? '<p class="td-meta">wird in OneNote eingetragen …</p>' : "") + "</div></div>";
+      // Seit 24.11.2026: nach links wischen zeigt Heute (Prio 1), Morgen und Tag (Leiste mit Tagen) zum Verschieben der Frist
+      return wisch ? '<div class="post-wisch todo-wisch" data-h="' + esc(x.h) + '"><div class="post-aktionen links"></div><div class="post-aktionen rechts">' +
+        ["heute", "morgen", "tag"].map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" + zeile + "</div>" : zeile;
+    };
     // Neue Antworten und Aufgaben aus dem Kalender haben keinen Haken, nur einen Punkt, damit der Text trotzdem an derselben Kante steht
     const infoZeile = x => '<div class="eintrag todo info"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta' + (x.art === "neu" ? " heute" : "") + '">' + esc(x.art === "neu" ? "neue Antwort" : de(x.label)) + "</p></div></div>";
     // Prio 1 (in OneNote "1!", seit 15.11.2026): sehr wichtig und zeitkritisch, eigener roter Block ganz oben
@@ -845,6 +864,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       if (h) { const v = (sitz.get("wv-voll") || []).filter(y => y !== h); if (auf) v.push(h); sitz.set("wv-voll", v); }
     });
     tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const typ = b.dataset.typ || "", x = (typ === "warten" ? wt || [] : td).find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true", typ); });
+    tb.querySelectorAll(".todo-wisch").forEach(el => wischen(el, todoWisch));
     hakenInfo();
     // Neue Antworten (Morgenzeitung) stehen seit 24.11.2026 in der Karte Post, nicht mehr bei den To-dos (Gregor: sind Infos, nichts zum Abhaken)
     zeichnePost(neu);
@@ -873,7 +893,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     loeschen: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 4h4M6.5 7l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12M10 11v6M14 11v6"/></svg>',
     ausblenden: '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/><path d="M4 20L20 4"/></svg>'
   };
-  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden" };
+  PA_ICON.heute = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>';
+  PA_ICON.morgen = '<svg viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></svg>';
+  PA_ICON.tag = '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>';
+  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", heute: "Heute, P1", morgen: "Morgen", tag: "Tag" };
   let postMailsAktuell = [], postOffen = null, postWischBis = 0;
   function postLokal(alle) {
     const l = lies(POSTLOKAL) || {}, ids = alle.map(m => m.id);
@@ -980,7 +1003,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   }
   // Seit 24.11.2026 abends in beide Richtungen (Gregors Wunsch): nach links zeigt die Knöpfe rechts, nach rechts die Knöpfe links.
   // Tempo über die letzten 100 ms wie beim Player, damit ein kurzes zügiges Wischen reicht.
-  function wischen(el) {
+  function wischen(el, beiKnopf) {
     const z = el.querySelector(".post-zeile"), bR = () => el.querySelector(".post-aktionen.rechts").offsetWidth, bL = () => el.querySelector(".post-aktionen.links").offsetWidth;
     let s = null;
     z.addEventListener("pointerdown", e => {
@@ -1021,10 +1044,62 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     z.addEventListener("pointerup", ende); z.addEventListener("pointercancel", ende);
     // Antippen einer offenen Zeile schließt sie, statt den Text aufzuklappen
     z.addEventListener("click", e => { if (Date.now() < postWischBis) { e.stopPropagation(); return; } if (el.classList.contains("auf")) { e.stopPropagation(); wischZu(el); } }, true);
-    el.querySelectorAll(".pa").forEach(btn => btn.onclick = e => { e.stopPropagation(); postAktion(el, btn.dataset.was); });
+    el.querySelectorAll(".pa").forEach(btn => btn.onclick = e => { e.stopPropagation(); (beiKnopf || postAktion)(el, btn.dataset.was); });
   }
   // Tippen irgendwo anders schließt eine offene Zeile
   document.addEventListener("pointerdown", e => { if (postOffen && !postOffen.contains(e.target)) wischZu(postOffen); }, { passive: true });
+  // ---------- Fristen per Wischen (seit 24.11.2026, Gregors Wunsch) ----------
+  // Heute = heute mit Prio 1! (roter Block oben), Morgen, Tag = Leiste mit den nächsten 21 Tagen und Kalender für später.
+  // Geht über die Haken-Schlange als {a:"frist", h, d:"TT.MM.", p:"1!"} an todo-sync.ps1 (todo.ps1 update, danach Prio-Nummern neu).
+  // Bis die neue Liste da ist, zeigt die App die neue Frist schon an (wv-frist-lokal).
+  const FRISTLOKAL = "wv-frist-lokal";
+  const isoTag = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const dmTag = d => String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + ".";
+  function fristLokal(liste) {
+    const l = lies(FRISTLOKAL) || {}; let geaendert = false;
+    const neu = liste.map(x => {
+      const o = l[x.h]; if (!o) return x;
+      if (Date.now() - o.ts > 864e5 || (x.f === o.f && !!x.k === !!o.k)) { delete l[x.h]; geaendert = true; return x; }
+      const y = Object.assign({}, x, { d: o.d, f: o.f, lokal: 1 }); if (o.k) y.k = 1; else delete y.k; return y;
+    });
+    Object.keys(l).forEach(h => { if (!liste.some(x => x.h === h)) { delete l[h]; geaendert = true; } });
+    if (geaendert) lsSet(FRISTLOKAL, JSON.stringify(l));
+    return neu;
+  }
+  function fristSetzen(h, datum, p1) {
+    const x = ((privat && privat.todos) || []).find(y => y.h === h); if (!x) return;
+    const l = lies(FRISTLOKAL) || {}; l[h] = { d: dmTag(datum), f: isoTag(datum), k: p1 ? 1 : 0, ts: Date.now() }; lsSet(FRISTLOKAL, JSON.stringify(l));
+    const q = lies(SCHLANGE) || []; q.push({ a: "frist", h, d: dmTag(datum), p: p1 ? "1!" : "", t: String(x.t).slice(0, 200), ts: Date.now() }); lsSet(SCHLANGE, JSON.stringify(q));
+    document.querySelectorAll(".frist-leiste").forEach(e => e.remove());
+    zeichneKalender(); sendeHaken();
+  }
+  function todoWisch(el, was) {
+    const h = el.dataset.h, heute = new Date(); heute.setHours(0, 0, 0, 0);
+    if (was === "heute") fristSetzen(h, heute, true);
+    else if (was === "morgen") { const m = new Date(heute); m.setDate(m.getDate() + 1); fristSetzen(h, m, false); }
+    else { wischZu(el); fristLeiste(el); }
+  }
+  function fristLeiste(el) {
+    const alt = el.nextElementSibling;
+    document.querySelectorAll(".frist-leiste").forEach(e => e.remove());
+    if (alt && alt.classList.contains("frist-leiste")) return; // zweites Antippen schließt
+    const h = el.dataset.h, x = ((privat && privat.todos) || []).find(y => y.h === h), heute = new Date(); heute.setHours(0, 0, 0, 0);
+    const WT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+    let html = "";
+    for (let i = 0; i < 21; i++) {
+      const d = new Date(heute); d.setDate(d.getDate() + i);
+      const name = i === 0 ? "Heute" : i === 1 ? "Morgen" : WT[d.getDay()], kl = [x && x.f === isoTag(d) ? "jetzt" : "", d.getDay() === 0 || d.getDay() === 6 ? "we" : ""].filter(Boolean).join(" ");
+      html += '<button type="button" data-tag="' + isoTag(d) + '"' + (kl ? ' class="' + kl + '"' : "") + "><span>" + name + "</span><b>" + dmTag(d) + "</b></button>";
+    }
+    html += '<label class="fl-kal"><span>Später</span><b>Datum</b><input type="date" min="' + isoTag(heute) + '" aria-label="Datum wählen"></label>';
+    const leiste = document.createElement("div");
+    leiste.className = "frist-leiste"; leiste.innerHTML = html;
+    el.after(leiste);
+    const zuDatum = v => { const t = String(v).split("-").map(Number); return new Date(t[0], t[1] - 1, t[2]); };
+    leiste.querySelectorAll("button").forEach(b => b.onclick = e => { e.stopPropagation(); fristSetzen(h, zuDatum(b.dataset.tag), false); });
+    leiste.querySelector("input").onchange = e => { if (e.target.value) fristSetzen(h, zuDatum(e.target.value), false); };
+    const jetzt = leiste.querySelector(".jetzt"); if (jetzt) leiste.scrollLeft = Math.max(0, jetzt.offsetLeft - 60);
+  }
   function postAktion(el, was) {
     const id = el.dataset.id, m = postMailsAktuell.find(x => x.id === id);
     if (!m) return;
@@ -1118,7 +1193,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (an) st[h] = { ts: Date.now() }; else delete st[h];
     if (an) frischeHaken.add(h); else frischeHaken.delete(h);
     lsSet(HAKEN, JSON.stringify(st));
-    const q = (lies(SCHLANGE) || []).filter(x => x.h !== h);
+    const q = (lies(SCHLANGE) || []).filter(x => x.h !== h || x.a === "frist");
     q.push(Object.assign({ a: an ? "erledigt" : "offen", h: h, t: String(text).slice(0, 200), ts: Date.now() }, typ ? { typ: typ } : {}));
     lsSet(SCHLANGE, JSON.stringify(q));
     zeichneKalender(); sendeHaken();
