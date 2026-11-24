@@ -118,6 +118,18 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .reihe.drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .reihe.drei .knopf { justify-self: stretch; padding: 0 4px; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .karte.todos { --akzent: var(--zeitung); --soft: var(--zeitung-soft); --leiste-farbe: var(--navy); }
+/* Post (seit 24.11.2026): Ergebnis des Postfach-Checks, Punkt je Art (To-do cyan, Dokument petrol und eckig, Antwort ozean, erledigt mit Haken, Info grau) */
+.karte.post { --akzent: var(--petrol); --leiste-farbe: var(--petrol); }
+.post-kopf { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.post-kopf .sp-meta { min-height: 0; }
+.knopf.kompakt { min-height: 38px; padding: 0 14px; font-size: .92rem; flex: none; }
+.knopf.kompakt:disabled { opacity: .55; cursor: default; }
+.post-zeile .td-text b { font-weight: 650; }
+.post-zeile[data-art="dokument"] .td-punkt::before { background: var(--petrol); border-radius: 2px; }
+.post-zeile[data-art="antwort"] .td-punkt::before { background: var(--ozean); }
+.post-zeile[data-art="info"] .td-punkt::before { background: var(--muted); opacity: .6; }
+.post-zeile[data-art="erledigt"] .td-punkt::before { content: "✓"; width: auto; height: auto; background: none; color: var(--hl); font-weight: 800; font-size: .95rem; }
+.post-zeile .td-meta b { font-weight: 700; color: var(--ink); }
 .liste h3.gruppe { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
@@ -336,7 +348,8 @@ nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="
 /* Laptop-Ansicht (seit 15.11.2026): automatisch ab 1000 px Breite, erzwingbar mit ?ansicht=laptop oder ?ansicht=handy.
    Leiste oben, Startseite zweispaltig, Zeitung als breitere Lesespalte */
 html.laptop .ansicht { max-width: 1180px; padding-block: calc(var(--leiste) + 28px) 48px; }
-html.laptop #v-heute { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: "kopf kopf" "kalender todos" "spiel todos" "spiel einst" "fuss fuss"; align-items: start; column-gap: 24px; }
+html.laptop #v-heute { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: "kopf kopf" "kalender post" "kalender todos" "spiel todos" "spiel einst" "fuss fuss"; align-items: start; column-gap: 24px; }
+html.laptop #v-heute > .karte.post { grid-area: post; }
 html.laptop #v-heute > header { grid-area: kopf; }
 html.laptop #v-heute > .karte.kalender { grid-area: kalender; }
 html.laptop #v-heute > .karte.todos { grid-area: todos; }
@@ -388,6 +401,13 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     <div class="kal" id="k-raster" hidden></div>
     <div class="kal-detail" id="kal-detail" role="status" hidden></div>
     <div class="liste" id="k-termine"><p class="zeile">Lädt</p></div>
+  </section>
+
+  <!-- Post (seit 24.11.2026, Gregors Wunsch): Postfach-Check des Servers um 7, 12 und 17 Uhr und auf Knopfdruck -->
+  <section class="karte post" aria-labelledby="k-post-titel">
+    <h2 id="k-post-titel">Post <span id="k-post-info"></span></h2>
+    <div class="post-kopf"><p class="sp-meta" id="k-post-stand"></p><button type="button" class="knopf kompakt" id="k-post-jetzt">Jetzt prüfen</button></div>
+    <div class="liste" id="k-post"><p class="zeile">Lädt</p></div>
   </section>
 
   <section class="karte todos" aria-labelledby="k-todos-titel">
@@ -697,6 +717,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (!privat) {
       $("k-raster").hidden = $("kal-kopf").hidden = $("kal-detail").hidden = true;
       ki.textContent = ""; ti.textContent = "";
+      zeichnePost(null);
       kb.innerHTML = tb.innerHTML = '<p class="zeile">' + (lsGet(KEY) === null ? "Gesperrt. Öffne die App über deinen persönlichen Link oder füge den Schlüssel unter Einstellungen ein." : "Der gespeicherte Schlüssel passt nicht zu dieser Ausgabe.") + "</p>";
       return;
     }
@@ -758,10 +779,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const ueber = offenTd.filter(x => x.f && x.f < tag).length, anzahl = offenTd.length + kalTodo.length;
     ti.textContent = anzahl ? anzahl + " offen" + (ueber ? ", " + ueber + " überfällig" : "") : "";
     // Seit 18.11.2026 (Gregors Wunsch): "Warten auf Antwort" steht offen ganz oben, darunter Prio 1, dann der Rest
-    tb.innerHTML = (neu.length + kalTodo.length + td.length || wartenHtml ? "" : '<p class="zeile">Nichts offen.</p>') +
+    tb.innerHTML = (kalTodo.length + td.length || wartenHtml ? "" : '<p class="zeile">Nichts offen.</p>') +
       (wartenHtml ? '<div class="warten-block"><p class="block-titel">Warten auf Antwort (' + wtOffen + ")</p>" + wartenHtml + "</div>" : "") +
       (krit.length ? '<div class="prio1"><p class="block-titel">Prio 1, wichtig und zeitkritisch</p>' + krit.map(tdZeile).join("") + "</div>" : "") +
-      neu.map(infoZeile).join("") + kalTodo.map(infoZeile).join("") + sicht.map(tdZeile).join("") +
+      kalTodo.map(infoZeile).join("") + sicht.map(tdZeile).join("") +
       (rest.length ? '<details class="mehr" data-merk="todos-weitere"' + (om["todos-weitere"] ? " open" : "") + '><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
       (fertigN ? '<details class="mehr erledigt-block" data-merk="todos-erledigt"' + (om["todos-erledigt"] ? " open" : "") + '><summary>Erledigt (' + fertigN + ")</summary><div class=\"liste-innen\">" + fertigHtml + "</div></details>" : "") +
       '<p class="sp-meta" id="k-todos-sync"></p>';
@@ -771,7 +792,71 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     });
     tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const typ = b.dataset.typ || "", x = (typ === "warten" ? wt || [] : td).find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true", typ); });
     hakenInfo();
+    // Neue Antworten (Morgenzeitung) stehen seit 24.11.2026 in der Karte Post, nicht mehr bei den To-dos (Gregor: sind Infos, nichts zum Abhaken)
+    zeichnePost(neu);
   }
+
+  // ---------- Post (seit 24.11.2026, Gregors Wunsch) ----------
+  // Ergebnis des Postfach-Checks (Server post\post.ps1 um 7, 12 und 17 Uhr, privat.post): neue Mails seit dem letzten Check und was daraus
+  // wurde (To-do angelegt, Dokument abgelegt, Antwort auf Warten, erledigt) oder nur Info. Werbung und Newsletter zählt der Server nur.
+  // "Jetzt prüfen" schickt verschlüsselt {a:"post"} ans ntfy-Thema der Haken, todo-sync.ps1 startet die Windows-Aufgabe "Postfach pruefen".
+  const POSTANFRAGE = "wv-post-anfrage", ARTEN = { todo: "To-do", dokument: "Dokument", antwort: "Antwort", erledigt: "Erledigt", info: "Info" };
+  let postUhr = null;
+  function postZeit(z) {
+    const d = new Date(z), h = new Date(); if (!z || isNaN(d)) return "";
+    const uhr = d.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" });
+    const tage = Math.round((new Date(h.toDateString()) - new Date(d.toDateString())) / 864e5);
+    return tage === 0 ? uhr : tage === 1 ? "gestern " + uhr : String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + ". " + uhr;
+  }
+  const naechsterCheck = () => { const h = new Date().getHours(); return h < 7 ? "7 Uhr" : h < 12 ? "12 Uhr" : h < 17 ? "17 Uhr" : "morgen 7 Uhr"; };
+  function zeichnePost(zeitungsNeu) {
+    const box = $("k-post"), info = $("k-post-info"), knopf = $("k-post-jetzt");
+    if (!privat) { box.innerHTML = '<p class="zeile">Gesperrt.</p>'; info.textContent = ""; $("k-post-stand").textContent = ""; knopf.hidden = true; return; }
+    knopf.hidden = false;
+    const p = privat.post || null, mails = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
+    // Antworten, die nur die Morgenzeitung kennt (Absender noch nicht in der Post), weiter zeigen
+    const zn = (zeitungsNeu || []).filter(x => !mails.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von)))));
+    const grenze = Date.now() - 24 * 3600e3, frisch = mails.filter(m => Date.parse(m.zeit) >= grenze), aelter = mails.filter(m => !(Date.parse(m.zeit) >= grenze));
+    const zeile = m => '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc([m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), m.quelle === "Gmail" ? "Gmail" : ""].filter(Boolean).join(" · ")) + "</p></div></div>";
+    const znZeile = x => '<div class="eintrag todo post-zeile" data-art="antwort"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta">Antwort, aus der Morgenzeitung</p></div></div>';
+    const om = offenMerk(), fuss = [];
+    if (p && p.ausgeblendet) fuss.push(p.ausgeblendet + (p.ausgeblendet === 1 ? " Newsletter oder Systemmail" : " Newsletter und Systemmails") + " beim letzten Check ausgeblendet");
+    if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
+    if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
+    if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
+    box.innerHTML = (frisch.length || zn.length ? frisch.map(zeile).join("") + zn.map(znZeile).join("") : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>") +
+      (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
+      (fuss.length ? '<p class="sp-meta">' + fuss.map(esc).join(". ") + ".</p>" : "");
+    box.querySelectorAll(".td-text").forEach(x => x.onclick = () => x.closest(".eintrag").classList.toggle("voll"));
+    info.textContent = frisch.length + zn.length ? frisch.length + zn.length + " neu" : "";
+    postStatus();
+  }
+  function postStatus() {
+    const st = $("k-post-stand"), knopf = $("k-post-jetzt"), p = privat && privat.post, seit = sitz.get(POSTANFRAGE);
+    const stand = p && p.stand ? Date.parse(p.stand) : 0, uhr = t => new Date(t).toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" });
+    clearTimeout(postUhr); postUhr = null;
+    let text = stand ? "Geprüft " + postZeit(p.stand) + ", nächster Check " + naechsterCheck() : "Checks um 7, 12 und 17 Uhr", wartet = false;
+    if (seit) {
+      if (stand >= seit - 5000 && !(p && p.laeuft)) { sitz.set(POSTANFRAGE, null); text = "Gerade geprüft um " + uhr(stand) + ", nächster Check " + naechsterCheck(); }
+      else if (Date.now() - seit > 15 * 60000) { sitz.set(POSTANFRAGE, null); text = "Der Check dauert länger als sonst, das Ergebnis kommt beim nächsten Öffnen."; }
+      else { wartet = true; text = p && p.laeuft ? "Prüfe gerade das Postfach …" : "Angefragt, der Server startet in bis zu einer Minute …"; }
+    } else if (p && p.laeuft) { wartet = true; text = "Prüfe gerade das Postfach …"; }
+    st.textContent = text;
+    knopf.disabled = wartet; knopf.textContent = wartet ? "Läuft …" : "Jetzt prüfen";
+    // Während der Check läuft alle 15 Sekunden den neuen Stand holen (frischHeute tauscht den verschlüsselten Teil und zeichnet neu)
+    if (wartet) postUhr = setTimeout(async () => { postUhr = null; if (!document.hidden) { try { await frischHeute(); } catch (e) {} } postStatus(); }, 15000);
+  }
+  $("k-post-jetzt").onclick = async () => {
+    const k = lsGet(KEY);
+    if (!k || !window.crypto || !crypto.subtle) return;
+    if (nachtruhe()) { $("k-post-stand").textContent = "Nachtruhe am Server, der nächste Check läuft um 7 Uhr."; return; }
+    sitz.set(POSTANFRAGE, Date.now()); postStatus();
+    try {
+      const { thema } = await schluesselTeile(k), body = JSON.stringify(await verschluessle({ a: "post", ts: Date.now() }, k));
+      const r = await fetch("https://ntfy.sh/" + thema, { method: "POST", body });
+      if (!r.ok) throw new Error(String(r.status));
+    } catch (e) { sitz.set(POSTANFRAGE, null); postStatus(); $("k-post-stand").textContent = "Keine Verbindung, bitte gleich noch einmal."; }
+  };
 
   // ---------- Haken an OneNote (seit 15.11.2026): verschlüsselt über ntfy.sh an ein geheimes Thema, todo-sync.ps1 auf dem Server setzt sie jede Minute ----------
   const hex = b => Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, "0")).join("");
