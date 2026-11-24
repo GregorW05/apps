@@ -158,7 +158,7 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .pk span.live { color: var(--gruen); font-weight: 700; }
 .pf-balken { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .pf-balken i { display: block; height: 100%; background: linear-gradient(90deg, var(--ozean), var(--cyan)); transform-origin: left center; transform: scaleX(0); transition: transform 1s linear; will-change: transform; }
-/* Wischen (seit 24.11.2026): Mail nach links ziehen, darunter To-do, Archiv, Löschen */
+/* Wischen (seit 24.11.2026): Mail nach links oder rechts ziehen, darunter To-do, Archiv, Löschen (rechts bzw. links) */
 .post-wisch { position: relative; overflow: hidden; border-radius: 8px; margin: 0 -8px; }
 .post-wisch > .post-zeile { position: relative; z-index: 1; padding: 4px 8px; background: var(--surface); touch-action: pan-y; transform: translate3d(0, 0, 0);
   transition: transform .28s cubic-bezier(.2, .8, .2, 1); -webkit-user-select: none; user-select: none; }
@@ -166,7 +166,9 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .post-wisch > .post-zeile { border-radius: 0; }
 /* Knöpfe nur sichtbar, solange gezogen wird, die Zeile offen ist oder gerade zurückgleitet (sonst blitzen Ecken am Rand) */
 .post-aktionen { position: absolute; top: 0; right: 0; bottom: 0; display: flex; visibility: hidden; }
-.post-wisch.zieht .post-aktionen, .post-wisch.auf .post-aktionen, .post-wisch.schliesst .post-aktionen { visibility: visible; }
+.post-aktionen.links { right: auto; left: 0; }
+.post-wisch[data-seite="r"].zieht .post-aktionen.rechts, .post-wisch[data-seite="r"].auf .post-aktionen.rechts, .post-wisch[data-seite="r"].schliesst .post-aktionen.rechts,
+.post-wisch[data-seite="l"].zieht .post-aktionen.links, .post-wisch[data-seite="l"].auf .post-aktionen.links, .post-wisch[data-seite="l"].schliesst .post-aktionen.links { visibility: visible; }
 .post-aktionen .pa { width: 74px; border: 0; padding: 0 4px; display: grid; place-content: center; justify-items: center; gap: 3px; color: #fff; font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .post-aktionen .pa svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .post-aktionen .pa:active { filter: brightness(.9); }
@@ -175,6 +177,7 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 @keyframes post-weg { 0% { opacity: 1; max-height: 180px; } 45% { opacity: 0; max-height: 180px; } 100% { opacity: 0; max-height: 0; } }
 .post-wisch.weg { animation: post-weg .38s ease-in forwards; pointer-events: none; }
 .post-wisch.weg > .post-zeile { transform: translate3d(-100%, 0, 0) !important; transition: transform .2s ease-in; }
+.post-wisch[data-seite="l"].weg > .post-zeile { transform: translate3d(100%, 0, 0) !important; }
 .liste h3.gruppe { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
@@ -896,7 +899,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const knoepfe = m => m.quelle === "Gmail" ? ["todo", "ausblenden"] : ["todo", "archiv", "loeschen"];
     const zeile = m => {
       const l = lokal[m.id], meta = l && l.was === "todo" ? "Kommt auf die To-do-Liste …" : [m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), m.quelle === "Gmail" ? "Gmail" : ""].filter(Boolean).join(" · ");
-      return '<div class="post-wisch" data-id="' + esc(m.id) + '"><div class="post-aktionen">' + knoepfe(m).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" +
+      const gruppe = seite => '<div class="post-aktionen ' + seite + '">' + knoepfe(m).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>";
+      return '<div class="post-wisch" data-id="' + esc(m.id) + '">' + gruppe("links") + gruppe("rechts") +
         '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
     };
     const znZeile = x => '<div class="eintrag todo post-zeile" data-art="antwort"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta">Antwort, aus der Morgenzeitung</p></div></div>';
@@ -905,7 +909,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
     if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
     if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
-    if (mails.length) fuss.push("Mail nach links ziehen für To-do, Archiv oder Löschen");
+    if (mails.length) fuss.push("Mail zur Seite ziehen für To-do, Archiv oder Löschen, Karte oben nach links ziehen zeigt die Postfächer");
     postOffen = null;
     box.innerHTML = (frisch.length || zn.length ? frisch.map(zeile).join("") + zn.map(znZeile).join("") : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>") +
       (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
@@ -934,7 +938,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       $("k-post-punkte").setAttribute("aria-expanded", String(auf));
     }
     k.addEventListener("pointerdown", e => {
-      if ((e.pointerType === "mouse" && e.button !== 0) || e.target.closest(".post-wisch, button, a, .post-konten")) return;
+      if ((e.pointerType === "mouse" && e.button !== 0) || e.target.closest(".post-wisch, button, a")) return;
       s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis: k.classList.contains("auf") ? -breite() : 0, rich: null, punkte: [{ x: e.clientX, t: performance.now() }], pos: 0 };
     });
     k.addEventListener("pointermove", e => {
@@ -965,36 +969,40 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     // Nach dem Ziehen keinen Klick (z. B. "Ältere" auf- oder zuklappen); offen schließt ein Tipp auf die Karte
     k.addEventListener("click", e => {
       if (Date.now() < bis) { e.stopPropagation(); e.preventDefault(); return; }
-      if (k.classList.contains("auf") && !e.target.closest(".post-konten")) { e.stopPropagation(); e.preventDefault(); setze(false); }
+      if (k.classList.contains("auf")) { e.stopPropagation(); e.preventDefault(); setze(false); } // auch ein Tipp auf die Postfächer schließt (Gregor 24.11.)
     }, true);
     $("k-post-punkte").addEventListener("click", e => { e.stopPropagation(); setze(!k.classList.contains("auf")); });
   })();
   function wischZu(el) {
     if (!el) return;
-    el.classList.add("schliesst"); clearTimeout(el._zu); el._zu = setTimeout(() => el.classList.remove("schliesst"), 320);
+    el.classList.add("schliesst"); clearTimeout(el._zu); el._zu = setTimeout(() => { el.classList.remove("schliesst"); if (!el.classList.contains("auf") && !el.classList.contains("zieht")) delete el.dataset.seite; }, 320);
     el.classList.remove("auf"); el.querySelector(".post-zeile").style.transform = ""; if (postOffen === el) postOffen = null;
   }
+  // Seit 24.11.2026 abends in beide Richtungen (Gregors Wunsch): nach links zeigt die Knöpfe rechts, nach rechts die Knöpfe links.
+  // Tempo über die letzten 100 ms wie beim Player, damit ein kurzes zügiges Wischen reicht.
   function wischen(el) {
-    const z = el.querySelector(".post-zeile"), breite = () => el.querySelector(".post-aktionen").offsetWidth;
+    const z = el.querySelector(".post-zeile"), bR = () => el.querySelector(".post-aktionen.rechts").offsetWidth, bL = () => el.querySelector(".post-aktionen.links").offsetWidth;
     let s = null;
     z.addEventListener("pointerdown", e => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
-      s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis: el.classList.contains("auf") ? -breite() : 0, rich: null, lx: e.clientX, lt: performance.now(), v: 0, pos: 0 };
+      const auf = el.classList.contains("auf"), basis = !auf ? 0 : el.dataset.seite === "l" ? bL() : -bR();
+      s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis, rich: null, punkte: [{ x: e.clientX, t: performance.now() }], pos: basis };
     });
     z.addEventListener("pointermove", e => {
       if (!s || e.pointerId !== s.id) return;
       const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      s.punkte.push({ x: e.clientX, t: performance.now() }); if (s.punkte.length > 12) s.punkte.shift();
       if (!s.rich) {
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
         s.rich = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (s.rich === "v") { s = null; return; }
         try { z.setPointerCapture(e.pointerId); } catch (x) {}
-        el.classList.add("zieht");
+        el.classList.add("zieht"); clearTimeout(el._zu); el.classList.remove("schliesst");
         if (postOffen && postOffen !== el) wischZu(postOffen);
       }
-      const jetzt = performance.now(); s.v = (e.clientX - s.lx) / Math.max(1, jetzt - s.lt); s.lx = e.clientX; s.lt = jetzt;
-      const b = breite(); let x = s.basis + dx;
-      if (x > 0) x *= 0.25; else if (x < -b) x = -b + (x + b) * 0.3; // über die Enden hinaus federt die Zeile
+      const r = bR(), l = bL(); let x = s.basis + dx;
+      if (x < -r) x = -r + (x + r) * 0.3; else if (x > l) x = l + (x - l) * 0.3; // über die Knöpfe hinaus federt die Zeile
+      if (x < 0) el.dataset.seite = "r"; else if (x > 0) el.dataset.seite = "l";
       s.pos = x; z.style.transform = "translate3d(" + x.toFixed(1) + "px,0,0)";
     });
     const ende = e => {
@@ -1002,8 +1010,13 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       const w = s; s = null;
       if (w.rich !== "h") return;
       el.classList.remove("zieht"); postWischBis = Date.now() + 350;
-      const b = breite(), auf = w.v < -0.3 ? true : w.v > 0.3 ? false : w.pos < -b * 0.4;
-      if (auf) { el.classList.add("auf"); z.style.transform = "translate3d(" + -b + "px,0,0)"; postOffen = el; } else wischZu(el);
+      const ps = w.punkte, zl = ps[ps.length - 1], a = ps.find(q => zl.t - q.t <= 100) || ps[0];
+      const v = performance.now() - zl.t > 120 || zl.t - a.t < 8 ? 0 : (zl.x - a.x) / (zl.t - a.t);
+      const r = bR(), l = bL();
+      let ziel = 0;
+      if (w.pos < 0) ziel = v < -0.3 || (v <= 0.3 && w.pos < -r * 0.4) ? -r : 0;
+      else if (w.pos > 0) ziel = v > 0.3 || (v >= -0.3 && w.pos > l * 0.4) ? l : 0;
+      if (ziel) { el.dataset.seite = ziel < 0 ? "r" : "l"; el.classList.add("auf"); z.style.transform = "translate3d(" + ziel + "px,0,0)"; postOffen = el; } else wischZu(el);
     };
     z.addEventListener("pointerup", ende); z.addEventListener("pointercancel", ende);
     // Antippen einer offenen Zeile schließt sie, statt den Text aufzuklappen
