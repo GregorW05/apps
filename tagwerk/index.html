@@ -1284,7 +1284,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("mini").addEventListener("pointerdown", e => { if (e.target === $("mini")) aussenZu(); });
   // Ziehen mit dem Finger (24.11.2026, Gregors Wunsch, ersetzt das einfache Wischen): Das Feld folgt dem Finger, egal wo auf Feld oder Player
   // der Finger aufsetzt, auch auf einer Stimme. Offen nach unten ziehen schiebt es hinter den Player, beim Loslassen schließt es, wenn es weit
-  // genug (30 %) oder schnell gezogen wurde, sonst federt es zurück. Zu nach oben ziehen holt es heraus. Über ganz offen hinaus federt der Player.
+  // genug (60 px) oder zügig gezogen wurde, sonst federt es zurück. Zu nach oben ziehen (ab 30 px) holt es heraus. Über ganz offen hinaus federt der Player.
   // Weder hier noch auf der Fläche dahinter scrollt die Seite (touch-action: none in CSS, dazu preventDefault). Nur transform und opacity.
   const mehr = $("mini-mehr"), innen = document.querySelector(".mini-innen"), hinter = $("mini-hinter");
   let zug = null;
@@ -1299,26 +1299,37 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("mini").addEventListener("touchstart", e => {
     if (e.touches.length !== 1) { zug = null; return; }
     const y = e.touches[0].clientY, h = mehr.offsetHeight || 1, offen = istOffen();
-    zug = { y0: y, ly: y, lt: performance.now(), v: 0, offen, p0: offen ? 0 : h, h, p: offen ? 0 : h, aktiv: false };
+    zug = { y0: y, punkte: [{ y, t: performance.now() }], offen, p0: offen ? 0 : h, h, p: offen ? 0 : h, aktiv: false };
   }, { passive: true });
+  // Geschwindigkeit über die letzten rund 100 ms (px/ms, negativ = nach oben). Nur der letzte Schritt war zu zufällig:
+  // beim Loslassen bremst der Finger, dann galt ein schnelles Wischen als langsam (Gregor 24.11.: reagiert beim ersten Mal oft nicht)
+  function zugTempo(z) {
+    const ps = z.punkte, b = ps[ps.length - 1], jetzt = performance.now();
+    if (!b || jetzt - b.t > 120) return 0; // Finger stand vor dem Loslassen still
+    const a = ps.find(x => b.t - x.t <= 100) || ps[0];
+    return b.t - a.t < 8 ? 0 : (b.y - a.y) / (b.t - a.t);
+  }
   $("mini").addEventListener("touchmove", e => {
     if (e.cancelable) e.preventDefault();
     if (!zug || e.touches.length !== 1) return;
     const y = e.touches[0].clientY, dy = y - zug.y0, jetzt = performance.now();
+    zug.punkte.push({ y, t: jetzt }); if (zug.punkte.length > 12) zug.punkte.shift();
     if (!zug.aktiv) {
-      if (Math.abs(dy) < 8) return;
-      zug.aktiv = true; zug.y0 += dy > 0 ? 8 : -8; // ab der Schwelle zählen, damit das Feld nicht springt
+      if (Math.abs(dy) < 6) return;
+      zug.aktiv = true; zug.y0 += dy > 0 ? 6 : -6; // ab der Schwelle zählen, damit das Feld nicht springt
       $("mini").classList.add("zieht"); hinter.classList.add("zieht");
       innen.style.transition = "none";
     }
-    zug.v = (y - zug.ly) / Math.max(1, jetzt - zug.lt); zug.ly = y; zug.lt = jetzt;
     zugSetzen(zug.p0 + (y - zug.y0));
   }, { passive: false });
   function zugEnde() {
     const z = zug; zug = null;
     if (!z || !z.aktiv) return;
     wischBis = Date.now() + 350;
-    const auf = z.v < -0.35 ? true : z.v > 0.35 ? false : z.p < z.h * (z.offen ? 0.3 : 0.75);
+    // Schon ein kurzes Streichen reicht (seit 24.11.2026 abends): zu nach oben ab 30 px oder zügig nach oben, offen nach unten ab 60 px
+    // oder zügig nach unten. Vorher brauchte es 25 % bzw. 30 % der Feldhöhe (rund 100 bzw. 120 px), deshalb klappte es oft erst beim zweiten Mal.
+    const v = zugTempo(z), hoch = z.p0 - z.p;
+    const auf = z.offen ? !(v > 0.25 || (hoch < -60 && v > -0.15)) : (v < -0.25 || (hoch > 30 && v < 0.15));
     // Klasse und Inline-Werte im selben Schritt wechseln: der Browser gleitet dann von der Fingerposition ans Ziel
     $("mini").classList.remove("zieht"); hinter.classList.remove("zieht");
     miniOffen(auf);
