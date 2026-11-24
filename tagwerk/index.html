@@ -225,6 +225,9 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
   transition: opacity .2s ease, visibility 0s linear .2s; -webkit-tap-highlight-color: transparent; }
 .mini-hinter.an { opacity: 1; visibility: visible; transition: opacity .25s ease, visibility 0s; }
 .mini-hinter.fang { visibility: visible; }
+/* Während des Ziehens folgt das Feld direkt dem Finger, ohne Übergang */
+.mini.zieht .mini-mehr { transition: none; visibility: visible; }
+.mini-hinter.zieht { transition: none; visibility: visible; }
 .mini-griff { position: absolute; top: 4px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, .35); transition: opacity .15s; }
 .mini.offen .mini-karte .mini-griff { opacity: 0; }
 .mini-mehr .mini-griff { top: 7px; }
@@ -1051,18 +1054,53 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("mini-hinter").addEventListener("click", () => { miniOffen(false); clearTimeout(fangUhr); $("mini-hinter").classList.remove("fang"); });
   // Rand neben der Karte gehört zum Player-Element, zählt aber als außerhalb
   $("mini").addEventListener("pointerdown", e => { if (e.target === $("mini")) aussenZu(); });
-  // Wischen (24.11.2026): auf dem Player nach oben öffnet, nach unten schließt. Weder hier noch auf der Fläche dahinter scrollt die Seite
-  // (touch-action: none in CSS, dazu preventDefault für ältere iOS-Versionen). Die Listener hängen nur an Player und Fläche, nicht am Dokument.
-  let wy = null;
-  $("mini").addEventListener("touchstart", e => { wy = e.touches.length === 1 ? e.touches[0].clientY : null; }, { passive: true });
+  // Ziehen mit dem Finger (24.11.2026, Gregors Wunsch, ersetzt das einfache Wischen): Das Feld folgt dem Finger, egal wo auf Feld oder Player
+  // der Finger aufsetzt, auch auf einer Stimme. Offen nach unten ziehen schiebt es hinter den Player, beim Loslassen schließt es, wenn es weit
+  // genug (30 %) oder schnell gezogen wurde, sonst federt es zurück. Zu nach oben ziehen holt es heraus. Über ganz offen hinaus federt der Player.
+  // Weder hier noch auf der Fläche dahinter scrollt die Seite (touch-action: none in CSS, dazu preventDefault). Nur transform und opacity.
+  const mehr = $("mini-mehr"), innen = document.querySelector(".mini-innen"), hinter = $("mini-hinter");
+  let zug = null;
+  const feder = x => 28 * (1 - Math.exp(-x / 90));
+  function zugSetzen(p) {
+    zug.p = p;
+    const q = Math.max(0, Math.min(zug.h, p));
+    mehr.style.transform = "translate3d(0," + q.toFixed(1) + "px,0)";
+    hinter.style.opacity = (1 - q / zug.h).toFixed(3);
+    innen.style.transform = p < 0 ? "translate3d(0," + (-feder(-p)).toFixed(1) + "px,0)" : "";
+  }
+  $("mini").addEventListener("touchstart", e => {
+    if (e.touches.length !== 1) { zug = null; return; }
+    const y = e.touches[0].clientY, h = mehr.offsetHeight || 1, offen = istOffen();
+    zug = { y0: y, ly: y, lt: performance.now(), v: 0, offen, p0: offen ? 0 : h, h, p: offen ? 0 : h, aktiv: false };
+  }, { passive: true });
   $("mini").addEventListener("touchmove", e => {
     if (e.cancelable) e.preventDefault();
-    if (wy === null) return;
-    const dy = e.touches[0].clientY - wy;
-    if (dy < -24 && !istOffen()) { miniOffen(true); wy = null; wischBis = Date.now() + 400; }
-    else if (dy > 24 && istOffen()) { miniOffen(false); wy = null; wischBis = Date.now() + 400; }
+    if (!zug || e.touches.length !== 1) return;
+    const y = e.touches[0].clientY, dy = y - zug.y0, jetzt = performance.now();
+    if (!zug.aktiv) {
+      if (Math.abs(dy) < 8) return;
+      zug.aktiv = true; zug.y0 += dy > 0 ? 8 : -8; // ab der Schwelle zählen, damit das Feld nicht springt
+      $("mini").classList.add("zieht"); hinter.classList.add("zieht");
+      innen.style.transition = "none";
+    }
+    zug.v = (y - zug.ly) / Math.max(1, jetzt - zug.lt); zug.ly = y; zug.lt = jetzt;
+    zugSetzen(zug.p0 + (y - zug.y0));
   }, { passive: false });
-  $("mini").addEventListener("touchend", () => { wy = null; }, { passive: true });
+  function zugEnde() {
+    const z = zug; zug = null;
+    if (!z || !z.aktiv) return;
+    wischBis = Date.now() + 350;
+    const auf = z.v < -0.35 ? true : z.v > 0.35 ? false : z.p < z.h * (z.offen ? 0.3 : 0.75);
+    // Klasse und Inline-Werte im selben Schritt wechseln: der Browser gleitet dann von der Fingerposition ans Ziel
+    $("mini").classList.remove("zieht"); hinter.classList.remove("zieht");
+    miniOffen(auf);
+    mehr.style.transform = ""; hinter.style.opacity = "";
+    innen.style.transition = "transform .32s cubic-bezier(.2, .8, .2, 1)"; innen.style.transform = "";
+  }
+  $("mini").addEventListener("touchend", zugEnde, { passive: true });
+  $("mini").addEventListener("touchcancel", zugEnde, { passive: true });
+  // Nach dem Ziehen keinen Klick auslösen (Stimme, Tempo, Auf und Zu)
+  $("mini").addEventListener("click", e => { if (Date.now() < wischBis) { e.stopPropagation(); e.preventDefault(); } }, true);
   $("mini-hinter").addEventListener("touchmove", e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && istOffen()) miniOffen(false); });
   $("mini-auf").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); miniOffen(!istOffen()); } });
