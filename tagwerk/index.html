@@ -111,6 +111,39 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .kal-detail { display: grid; gap: 2px; padding: 8px 10px; border-left: 3px solid var(--cyan); background: var(--soft); border-radius: 4px; font-size: .92rem; line-height: 1.35; }
 .kal-detail b { font-weight: 650; }
 .kal-detail span { color: var(--muted); font-size: .85rem; }
+/* Termine verschieben und löschen (seit 24.11.2026) */
+.kal-akt { display: grid; gap: 8px; margin-top: 6px; }
+.kal-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.kal-chip { min-height: 36px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.kal-chip:active { transform: scale(.97); }
+.kal-chip[aria-expanded="true"] { border-color: var(--cyan); color: var(--hl); }
+.kal-chip.loeschen { color: var(--rot); border-color: color-mix(in srgb, var(--rot) 35%, var(--line)); }
+.kal-chip.ja { background: var(--rot); border-color: var(--rot); color: #fff; }
+.kal-anders { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.kal-anders input { min-height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: .9rem; }
+.kal-detail .kal-hinweis { margin: 4px 0 0; font-size: .85rem; color: var(--muted); }
+.kal-t.wartet, .kal-g.wartet { outline: 2px dashed var(--cyan); outline-offset: -2px; }
+.kal-g.neu { position: relative; }
+.kal-t.neu::after, .kal-g.neu::after { content: ""; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 2px var(--surface); }
+/* Kurzmeldung unten, mit Rückgängig (seit 24.11.2026) */
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 88px); transform: translate(-50%, 16px); z-index: 70; display: flex; gap: 14px; align-items: center; width: max-content; max-width: min(92vw, 520px); padding: 10px 12px 10px 14px; border-radius: 10px; background: var(--navy); color: #fff; font-size: .9rem; line-height: 1.35; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+.toast.an { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast button { flex: none; border: 0; background: transparent; color: #7FD3F5; font: inherit; font-weight: 700; padding: 6px 4px; cursor: pointer; }
+/* Abgleich beim Ziehen zum Aktualisieren (seit 24.11.2026) */
+.abgl { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.abgl-reihe { display: flex; flex-wrap: wrap; gap: 6px; }
+.abgl-p { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 11px; border-radius: 999px; background: var(--surface-2); color: var(--ink); font-size: .82rem; font-weight: 600; }
+.abgl-p i { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); animation: abgl-puls 1s ease-in-out infinite; }
+.abgl-p.ok i { animation: none; background: var(--gruen); }
+@keyframes abgl-puls { 50% { opacity: .25; } }
+.abgl-d { margin: 0; font-size: .82rem; color: var(--muted); line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .abgl-p i { animation: none; } }
+/* Posteingang-Spiegel in der Karte Post (seit 24.11.2026): gelesen hohler Punkt, ungelesen cyan */
+.post-zeile[data-art="eingang"] .td-punkt::before { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.post-zeile.ungelesen .td-punkt::before { background: var(--cyan); box-shadow: none; }
+details.post-konto summary .ung { color: var(--cyan-dunkel); font-weight: 700; }
+details.post-konto summary b { color: var(--ink); }
+.post-titel { margin: 6px 0 0; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 html.laptop .kal { grid-template-columns: 32px repeat(var(--spalten), minmax(0, 1fr)); }
 html.laptop .kal-t { font-size: .78rem; padding: 3px 5px; } html.laptop .kal-t span { font-size: .7rem; }
 html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78rem; } html.laptop .kal-achse span { font-size: .7rem; }
@@ -457,6 +490,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     <h1 id="h-heute">Heute</h1>
     <p class="wetter" id="wetter-kurz"></p>
   </header>
+  <!-- Abgleich nach dem Ziehen zum Aktualisieren (seit 24.11.2026): To-dos, Kalender, Post -->
+  <div class="abgl" id="abgl" role="status" aria-live="polite" hidden></div>
 
   <!-- Zeitung seit 22.11.2026 nicht mehr auf der Startseite (Gregors Wunsch), nur noch im Reiter Zeitung -->
   <section class="karte kalender" aria-labelledby="k-kalender">
@@ -562,6 +597,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   <a href="#essen" data-v="essen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 4.5c-.8 1 .8 2 0 3M12.5 4.5c-.8 1 .8 2 0 3M16 4.5c-.8 1 .8 2 0 3"/></svg>Essen</a>
 </div></nav>
 
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="raetsel.js"></script>
 <script>
 (function () {
@@ -682,7 +718,14 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const N = kalModus(), eng = N === 7 && !laptop, voll = !!sitz.get("wv-kal-voll"), jetzt = new Date(), h0 = mitternacht(jetzt);
     const [lo, hi] = kalGrenzen(N), v = Math.max(lo, Math.min(hi, sitz.get("wv-kal-versatz") || 0));
     const tage = Array.from({ length: N }, (_, i) => mitternacht(h0, v + i)), ende = mitternacht(tage[0], N);
-    const alle = kal.termine.map((x, i) => ({ i, t: String(x.t || "").trim() || "(ohne Titel)", o: x.o || "", g: !!x.g, b: x.b, s: kalDatum(x.s), e: kalDatum(x.e) }));
+    // Eigene Änderungen (verschoben, gelöscht), bis Outlook sie zurückmeldet (seit 24.11.2026)
+    const ov = {}; kalLokal(kal).forEach(o => { ov[o.k] = o; });
+    if (kalFehler) { toast(kalFehler); kalFehler = ""; }
+    const neuSet = new Set(sitz.get("wv-kal-neu") || []);
+    const alle = kal.termine.map((x, i) => ({ i, k: x.k || "", m: !!x.m, r: !!x.r, t: String(x.t || "").trim() || "(ohne Titel)", o: x.o || "", g: !!x.g, b: x.b, s: kalDatum(x.s), e: kalDatum(x.e) }))
+      .filter(x => !(x.k && ov[x.k] && ov[x.k].was === "loeschen"))
+      .map(x => { const o = x.k && ov[x.k]; return o && o.was === "verschieben" ? Object.assign(x, { s: kalDatum(o.s), e: kalDatum(o.e), wartet: true }) : x; });
+    const kalExtra = x => (x.wartet ? " wartet" : "") + (x.k && neuSet.has(x.k) ? " neu" : "");
     const sicht = alle.filter(x => x.e > tage[0] && x.s < ende || (+x.s === +x.e && x.s >= tage[0] && x.s < ende));
     const ganz = sicht.filter(x => x.g), zeitl = sicht.filter(x => !x.g);
     // Zeitliche Termine je Tag zerschneiden (über Mitternacht), Minuten ab 0 Uhr, mindestens 15 Minuten
@@ -722,7 +765,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         const c0 = Math.max(0, Math.round((mitternacht(x.s) - tage[0]) / 864e5)), c1 = Math.min(N - 1, Math.max(c0, Math.round((tagE - tage[0]) / 864e5) - 1));
         let l = 0; while ((bahnen[l] || []).some(r => !(c1 < r[0] || c0 > r[1]))) l++;
         (bahnen[l] = bahnen[l] || []).push([c0, c1]);
-        return '<button type="button" class="kal-g' + kalArt(x) + (x.i === kalWahl ? " sel" : "") + '" data-i="' + x.i + '" style="grid-column:' + (c0 + 1) + " / " + (c1 + 2) + ";grid-row:" + (l + 1) + '" aria-label="' + esc(x.t + ", " + kalZeit(x)) + '">' + esc(x.t) + "</button>";
+        return '<button type="button" class="kal-g' + kalArt(x) + kalExtra(x) + (x.i === kalWahl ? " sel" : "") + '" data-i="' + x.i + '" style="grid-column:' + (c0 + 1) + " / " + (c1 + 2) + ";grid-row:" + (l + 1) + '" aria-label="' + esc(x.t + ", " + kalZeit(x)) + '">' + esc(x.t) + "</button>";
       });
       h += '<div class="kal-ecke kal-gl">ganzt.</div><div class="kal-ganz" style="grid-template-columns:repeat(' + N + ',minmax(0,1fr))">' + chips.join("") + "</div>";
     }
@@ -742,7 +785,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         seg[c].map(s => {
           const top = y(s.a), hh = Math.max(y(s.b) - top, 13);
           const zeitZeile = hh >= 30 && !eng ? "<span>" + uhr(s.x.s) + (s.x.e - s.x.s >= 36e5 ? " bis " + uhr(s.x.e) : "") + "</span>" : "";
-          return '<button type="button" class="kal-t' + kalArt(s.x) + (s.x.e <= jetzt ? " vorbei" : "") + (s.x.i === kalWahl ? " sel" : "") + '" data-i="' + s.x.i + '" style="top:' + top.toFixed(1) + "px;height:" + (hh - 1).toFixed(1) + "px;left:" + (s.l / s.n * 100).toFixed(2) + "%;width:calc(" + (100 / s.n).toFixed(2) + '% - 2px)" aria-label="' + esc(s.x.t + ", " + kalZeit(s.x)) + '"><b>' + esc(s.x.t) + "</b>" + zeitZeile + "</button>";
+          return '<button type="button" class="kal-t' + kalArt(s.x) + kalExtra(s.x) + (s.x.e <= jetzt ? " vorbei" : "") + (s.x.i === kalWahl ? " sel" : "") + '" data-i="' + s.x.i + '" style="top:' + top.toFixed(1) + "px;height:" + (hh - 1).toFixed(1) + "px;left:" + (s.l / s.n * 100).toFixed(2) + "%;width:calc(" + (100 / s.n).toFixed(2) + '% - 2px)" aria-label="' + esc(s.x.t + ", " + kalZeit(s.x)) + '"><b>' + esc(s.x.t) + "</b>" + zeitZeile + "</button>";
         }).join("") +
         (heute ? '<i class="kal-jetzt" style="top:' + y(jetztM).toFixed(1) + 'px"></i>' : "") + "</div>";
     });
@@ -756,7 +799,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     // Details zum angetippten Termin
     const w = alle.find(x => x.i === kalWahl);
     det.hidden = !w;
-    det.innerHTML = w ? "<b>" + esc(w.t) + "</b><span>" + esc(kalZeit(w)) + (w.b === 0 ? " · frei" : w.b === 1 ? " · mit Vorbehalt" : "") + "</span>" + (w.o ? "<span>" + esc(w.o) + "</span>" : "") : "";
+    det.innerHTML = w ? kalDetail(w) : "";
+    if (w) kalKnoepfe(w);
     // Kopf der Karte: was gerade läuft oder als Nächstes kommt
     const zt = alle.filter(x => !x.g), laeuft = zt.find(x => x.s <= jetzt && x.e > jetzt), naechst = zt.filter(x => x.s > jetzt).sort((p, q) => p.s - q.s)[0];
     const wann = d => +mitternacht(d) === +h0 ? "" : +mitternacht(d) === +mitternacht(h0, 1) ? "morgen " : WTK[d.getDay()] + " ";
@@ -768,9 +812,157 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("k-raster").addEventListener("click", e => {
     if (e.target.closest(".falte-l, .kal-falte")) { sitz.set("wv-kal-voll", !sitz.get("wv-kal-voll")); zeichneRaster(); return; }
     const b = e.target.closest("[data-i]");
+    kalBestaetigen = kalAnders = false;
     if (!b) { if (kalWahl !== -1) { kalWahl = -1; zeichneRaster(); } return; }
     kalWahl = kalWahl === +b.dataset.i ? -1 : +b.dataset.i; zeichneRaster();
   });
+  // ---------- Termine löschen und verschieben (seit 24.11.2026, Gregors Wunsch) ----------
+  // Termin antippen: unter dem Raster Verschieben (+30 Min, +1 Std, Morgen, +1 Woche, Andere Zeit) und Löschen mit Rückfrage.
+  // Die Änderung gilt sofort in der App und lässt sich 6 Sekunden lang rückgängig machen, dann geht sie verschlüsselt über die Schlange
+  // an den Server (todo-sync.ps1 ruft zeitung\kalender-aktion.ps1). Besprechungen mit Teilnehmern bietet die App nicht an, weil Outlook
+  // sonst Absagen oder Aktualisierungen verschicken würde. Bei Serien gilt es nur für den einen Termin. Löschen geht nach Gelöschte Elemente.
+  const KALLOKAL = "wv-kal-lokal";
+  const kalIso = d => d.getFullYear() + "-" + zwei(d.getMonth() + 1) + "-" + zwei(d.getDate()) + "T" + zwei(d.getHours()) + ":" + zwei(d.getMinutes());
+  let kalFehler = "", kalBestaetigen = false, kalAnders = false;
+  function kalLokal(kal) {
+    const l = lies(KALLOKAL) || [], termine = kal.termine || [], akt = kal.aktionen || [];
+    let geaendert = false;
+    const rest = l.filter(o => {
+      const erg = akt.find(a => a.k === o.k && String(a.app) === String(o.ts));
+      if (erg && !erg.ok) { kalFehler = "„" + o.t + "“ ließ sich nicht ändern: " + String(erg.msg || "").replace(/^(FEHLER|ABGELEHNT)\s*/, ""); geaendert = true; return false; }
+      const t = termine.find(x => x.k === o.k), umgesetzt = o.was === "loeschen" ? !t : (!t || (t.s === o.s && t.e === o.e));
+      if (o.gesendet && (erg || umgesetzt)) { geaendert = true; return false; }
+      if (Date.now() - o.ts > 12 * 3600e3) { kalFehler = "„" + o.t + "“ kam nicht in Outlook an."; geaendert = true; return false; }
+      return true;
+    });
+    if (geaendert) lsSet(KALLOKAL, JSON.stringify(rest));
+    return rest;
+  }
+  function kalAktion(x, was, s, e) {
+    const l = (lies(KALLOKAL) || []).filter(o => o.k !== x.k);
+    const o = { k: x.k, was, s: s ? kalIso(s) : "", e: e ? kalIso(e) : "", t: x.t, ts: Date.now(), gesendet: false };
+    l.push(o); lsSet(KALLOKAL, JSON.stringify(l));
+    kalWahl = -1; kalBestaetigen = kalAnders = false; zeichneRaster();
+    const nacht = nachtruhe() ? " Outlook folgt um 7 Uhr." : "";
+    toast((was === "loeschen" ? "Gelöscht: " + x.t : "Verschoben auf " + tagKurz(s) + (x.g ? "" : " " + uhr(s))) + nacht, () => {
+      lsSet(KALLOKAL, JSON.stringify((lies(KALLOKAL) || []).filter(y => y.ts !== o.ts))); zeichneRaster();
+    });
+    setTimeout(kalSenden, 6300);
+  }
+  function kalSenden() {
+    const l = lies(KALLOKAL) || []; let n = 0;
+    l.forEach(o => {
+      if (o.gesendet || Date.now() - o.ts < 6000) return;
+      const q = lies(SCHLANGE) || [];
+      q.push({ a: "termin", was: o.was, k: o.k, s: o.s, e: o.e, h: "termin-" + o.k + "-" + o.ts, t: String(o.t).slice(0, 120), ts: o.ts });
+      lsSet(SCHLANGE, JSON.stringify(q)); o.gesendet = true; n++;
+    });
+    if (n) { lsSet(KALLOKAL, JSON.stringify(l)); sendeHaken(); }
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) kalSenden(); });
+  function kalDetail(w) {
+    let h = "<b>" + esc(w.t) + "</b><span>" + esc(kalZeit(w)) + (w.b === 0 ? " · frei" : w.b === 1 ? " · mit Vorbehalt" : "") + "</span>" + (w.o ? "<span>" + esc(w.o) + "</span>" : "");
+    if (!w.k) return h;
+    if (w.m) return h + '<p class="kal-hinweis">Besprechung mit Teilnehmern. Bitte direkt in Outlook ändern, sonst gehen Absagen oder Einladungen raus.</p>';
+    if (w.wartet) return h + '<p class="kal-hinweis">Wird in Outlook eingetragen …</p>';
+    const chips = w.g ? [["tag1", "Morgen"], ["woche", "+1 Woche"]] : [["m30", "+30 Min"], ["h1", "+1 Std"], ["tag1", "Morgen"], ["woche", "+1 Woche"]];
+    h += '<div class="kal-akt"><div class="kal-chips">' + chips.map(c => '<button type="button" class="kal-chip" data-v="' + c[0] + '">' + c[1] + "</button>").join("") +
+      '<button type="button" class="kal-chip" data-v="anders" aria-expanded="' + kalAnders + '">Andere Zeit</button>' +
+      (kalBestaetigen ? '<button type="button" class="kal-chip ja" data-v="ja">Wirklich löschen</button><button type="button" class="kal-chip" data-v="nein">Nein</button>'
+        : '<button type="button" class="kal-chip loeschen" data-v="loeschen">Löschen</button>') + "</div>";
+    if (kalAnders) h += '<div class="kal-anders"><input type="date" value="' + isoTag(w.s) + '" aria-label="Neues Datum">' + (w.g ? "" : '<input type="time" step="300" value="' + uhr(w.s) + '" aria-label="Neue Uhrzeit">') +
+      '<button type="button" class="kal-chip" data-v="speichern">Verschieben</button></div>';
+    if (w.r) h += '<p class="kal-hinweis">Serientermin, die Änderung gilt nur für diesen Termin.</p>';
+    return h + "</div>";
+  }
+  function kalKnoepfe(w) {
+    const det = $("kal-detail"), dauer = w.e - w.s;
+    det.querySelectorAll(".kal-chip").forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      const v = b.dataset.v, nach = s => kalAktion(w, "verschieben", s, new Date(+s + dauer));
+      if (v === "m30") nach(new Date(+w.s + 30 * 6e4));
+      else if (v === "h1") nach(new Date(+w.s + 36e5));
+      else if (v === "tag1" || v === "woche") { const s = new Date(w.s); s.setDate(s.getDate() + (v === "tag1" ? 1 : 7)); nach(s); }
+      else if (v === "anders") { kalAnders = !kalAnders; kalBestaetigen = false; zeichneRaster(); }
+      else if (v === "loeschen") { kalBestaetigen = true; kalAnders = false; zeichneRaster(); }
+      else if (v === "nein") { kalBestaetigen = false; zeichneRaster(); }
+      else if (v === "ja") kalAktion(w, "loeschen");
+      else if (v === "speichern") {
+        const d = det.querySelector('input[type="date"]').value, t = det.querySelector('input[type="time"]');
+        if (!d) return;
+        const p = d.split("-").map(Number), hm = t && t.value ? t.value.split(":").map(Number) : [w.s.getHours(), w.s.getMinutes()];
+        nach(new Date(p[0], p[1] - 1, p[2], hm[0] || 0, hm[1] || 0));
+      }
+    });
+  }
+  // ---------- Kurzmeldung unten mit Rückgängig (seit 24.11.2026) ----------
+  let toastUhr = null;
+  function toast(text, rueck) {
+    const t = $("toast"); if (!t) return;
+    clearTimeout(toastUhr);
+    t.innerHTML = "<span>" + esc(text) + "</span>" + (rueck ? '<button type="button">Rückgängig</button>' : "");
+    t.classList.add("an");
+    if (rueck) t.querySelector("button").onclick = () => { clearTimeout(toastUhr); t.classList.remove("an"); rueck(); };
+    toastUhr = setTimeout(() => t.classList.remove("an"), rueck ? 6000 : 4500);
+  }
+  // ---------- Ziehen zum Aktualisieren: Abgleich sichtbar (seit 24.11.2026, Gregors Wunsch) ----------
+  // Beim Ziehen merkt sich die App den Stand vorher (Termine der nächsten 21 Tage, abgehakte To-dos). Der Server räumt die To-dos auf
+  // (todo.ps1 sweep), liest den Kalender frisch und startet den Postfach-Check wie "Jetzt prüfen". Oben auf Heute zeigen drei Punkte,
+  // was läuft und was herauskam (neue, verschobene, entfernte Termine stehen darunter und haben im Raster einen cyan Punkt).
+  const ABGL = "wv-abgl";
+  function kalSchnapp() {
+    const kal = privat && privat.kalender; if (!kal || !Array.isArray(kal.termine)) return null;
+    const von = Date.now() - 36e5, bis = Date.now() + 21 * 864e5;
+    return kal.termine.filter(x => { const s = +kalDatum(x.s); return s >= von && s <= bis; }).map(x => ({ k: x.k || (x.t + "|" + x.s), t: String(x.t || "").trim() || "(ohne Titel)", s: x.s, g: x.g ? 1 : 0 }));
+  }
+  function abgleichVormerken() {
+    const hk = hakenStand(), td = (privat && privat.todos) || [];
+    sitz.set(ABGL, { ts: Date.now(), kal: kalSchnapp(), erl: td.filter(x => x.h && hk[x.h]).map(x => x.h), nacht: nachtruhe() });
+    sitz.set("wv-kal-neu", null);
+    if (!nachtruhe() && lsGet(KEY)) sitz.set(POSTANFRAGE, Date.now());
+  }
+  function kalVergleich(alt, neu) {
+    const am = new Map(alt.map(x => [x.k, x])), nm = new Map(neu.map(x => [x.k, x])), weg = alt.filter(x => !nm.has(x.k));
+    const versch = neu.filter(x => am.has(x.k) && am.get(x.k).s !== x.s);
+    // Ein verschobener Serientermin bekommt einen neuen Schlüssel: gleicher Titel in "weg" und "neu" zählt als verschoben
+    const dazu = neu.filter(x => !am.has(x.k)).filter(x => { const i = weg.findIndex(y => y.t === x.t); if (i < 0) return true; weg.splice(i, 1); versch.push(x); return false; });
+    return { dazu, weg, versch };
+  }
+  function zeichneAbgleich() {
+    const box = $("abgl"), a = sitz.get(ABGL);
+    if (!box) return;
+    if (!a || Date.now() - a.ts > 15 * 60000 || (a.zu && Date.now() > a.zu)) { box.hidden = true; return; }
+    if (a.nacht) {
+      box.hidden = false; box.innerHTML = '<p class="abgl-d">Nachtruhe am Server. To-dos, Kalender und Post gleichen sich ab 7 Uhr ab.</p>';
+      if (!a.zu) { a.zu = Date.now() + 8000; sitz.set(ABGL, a); setTimeout(zeichneAbgleich, 8100); }
+      return;
+    }
+    const fertig = !!(zeitung && zeitung.abgeglichen && Date.parse(zeitung.abgeglichen) >= a.ts - 5000);
+    const kal = privat && privat.kalender, kalFertig = fertig && !!(kal && Date.parse(kal.stand) >= a.ts - 5000), postFertig = !sitz.get(POSTANFRAGE);
+    const td = (privat && privat.todos) || [], p = (ok, t) => '<span class="abgl-p' + (ok ? " ok" : "") + '"><i></i>' + esc(t) + "</span>";
+    let tdT = "To-dos aufräumen …", kT = "Kalender prüfen …", pT = "Post prüfen …", det = [];
+    if (fertig) { const n = (a.erl || []).filter(h => !td.some(x => x.h === h)).length; tdT = n ? "To-dos: " + n + (n === 1 ? " erledigtes" : " erledigte") + " entfernt" : "To-dos aktuell"; }
+    if (kalFertig) {
+      const neu = kalSchnapp();
+      if (a.kal && neu) {
+        const v = kalVergleich(a.kal, neu), teile = [];
+        if (v.dazu.length) teile.push(v.dazu.length + " neu");
+        if (v.versch.length) teile.push(v.versch.length + " verschoben");
+        if (v.weg.length) teile.push(v.weg.length + " entfernt");
+        kT = teile.length ? "Kalender: " + teile.join(", ") : "Kalender: keine Änderungen";
+        const z = x => tagKurz(kalDatum(x.s)) + (x.g ? "" : " " + uhr(kalDatum(x.s))) + " " + x.t;
+        det = v.dazu.map(x => "Neu: " + z(x)).concat(v.versch.map(x => "Verschoben: " + z(x)), v.weg.map(x => "Entfernt: " + z(x))).slice(0, 5);
+        if (!a.neuGesetzt) { a.neuGesetzt = 1; sitz.set(ABGL, a); sitz.set("wv-kal-neu", v.dazu.concat(v.versch).map(x => x.k)); zeichneRaster(); }
+      } else kT = "Kalender geprüft";
+    }
+    if (postFertig) {
+      const e = privat && privat.post && privat.post.eingang, u = e && Array.isArray(e.konten) ? e.konten.reduce((s, k) => s + (k.ungelesen || 0), 0) : 0;
+      pT = u ? "Post: " + u + " ungelesen" : "Post geprüft";
+    }
+    box.hidden = false;
+    box.innerHTML = '<div class="abgl-reihe">' + p(fertig, tdT) + p(kalFertig, kT) + p(postFertig, pT) + "</div>" + (det.length ? '<p class="abgl-d">' + det.map(esc).join("<br>") + "</p>" : "");
+    if (fertig && kalFertig && postFertig && !a.zu) { a.zu = Date.now() + 60000; sitz.set(ABGL, a); setTimeout(zeichneAbgleich, 60500); }
+  }
   $("kal-zurueck").onclick = () => kalSchieben(-1);
   $("kal-vor").onclick = () => kalSchieben(1);
   $("kal-heute").onclick = () => kalSchieben(0);
@@ -877,6 +1069,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     hakenInfo();
     // Neue Antworten (Morgenzeitung) stehen seit 24.11.2026 in der Karte Post, nicht mehr bei den To-dos (Gregor: sind Infos, nichts zum Abhaken)
     zeichnePost(neu);
+    zeichneAbgleich();
   }
 
   // ---------- Post (seit 24.11.2026, Gregors Wunsch) ----------
@@ -907,6 +1100,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   PA_ICON.tag = '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>';
   const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", heute: "Heute, P1", morgen: "Morgen", tag: "Tag" };
   let postMailsAktuell = [], postOffen = null, postWischBis = 0;
+  const EINGANGLOKAL = "wv-eingang-lokal";
+  let postEingangAktuell = [], postZnLetzt = null;
   function postLokal(alle) {
     const l = lies(POSTLOKAL) || {}, ids = alle.map(m => m.id);
     let geaendert = false;
@@ -923,7 +1118,15 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     zeichneKonten(privat.post && privat.post.konten);
     knopf.hidden = false;
     const p = privat.post || null, alle = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
-    const lokal = postLokal(alle), mails = alle.filter(m => !lokal[m.id]); // seit 24.11. abends verschwinden alle drei Aktionen sofort
+    postZnLetzt = zeitungsNeu;
+    // Posteingang-Spiegel (seit 24.11.2026, Gregors Wunsch): alles, was in den Posteingängen liegt, je Konto aufklappbar wie die Berichte
+    // der Zeitung. Hinweise des Checks zu diesen Mails stehen an der Mail selbst, darunter bleibt nur, was nicht (mehr) im Posteingang liegt.
+    const ein = p && p.eingang && Array.isArray(p.eingang.konten) ? p.eingang.konten : null;
+    const eLokal = eingangLokal(ein), eIds = new Set(), checkZu = {};
+    if (ein) ein.forEach(k => (k.mails || []).forEach(m => eIds.add(m.id)));
+    alle.forEach(m => { if (eIds.has(m.id)) checkZu[m.id] = m; });
+    postEingangAktuell = ein ? ein.flatMap(k => (k.mails || []).map(m => Object.assign({ konto: k.konto }, m))) : [];
+    const lokal = postLokal(alle), mails = alle.filter(m => !lokal[m.id] && !eIds.has(m.id)); // seit 24.11. abends verschwinden alle drei Aktionen sofort
     postMailsAktuell = mails;
     // Antworten, die nur die Morgenzeitung kennt (Absender noch nicht in der Post), weiter zeigen
     const zn = (zeitungsNeu || []).filter(x => !alle.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von)))));
@@ -943,15 +1146,52 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
     if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
     if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
-    if (mails.length) fuss.push("Mail nach rechts ziehen für To-do, Archiv oder Löschen, nach links ziehen zeigt die Postfächer");
+    if (mails.length || eIds.size) fuss.push("Mail nach rechts ziehen für To-do, Archiv oder Löschen, nach links ziehen zeigt die Postfächer");
     postOffen = null;
-    box.innerHTML = (frisch.length || zn.length ? frisch.map(zeile).join("") + zn.map(znZeile).join("") : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>") +
+    // Je Konto ein aufklappbarer Block: Kopf mit Anzahl und ungelesenen, darin die Mails (ungelesen mit cyan Punkt)
+    let eHtml = "", eGesamt = 0, eUngelesen = 0;
+    const eZeile = m => {
+      const c = checkZu[m.id], meta = [postZeit(m.zeit), m.anh ? "Anhang" : "", c ? (c.aktion || ARTEN[c.art] || "") : ""].filter(Boolean).join(" · ");
+      return '<div class="post-wisch" data-id="' + esc(m.id) + '" data-e="1"><div class="post-aktionen links">' + knoepfe().map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" +
+        '<div class="eintrag todo post-zeile' + (m.neu ? " ungelesen" : "") + '" data-art="eingang"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.betreff || "(ohne Betreff)") +
+        (m.kurz ? '<span class="td-rest"> · ' + esc(m.kurz) + "</span>" : "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
+    };
+    if (ein) ein.filter(k => (k.mails || []).length || k.konto !== "MBS").forEach(k => {
+      const sicht = (k.mails || []).filter(m => !eLokal[m.id]), mehr = Math.max(0, (k.anzahl || 0) - (k.mails || []).length);
+      const u = sicht.filter(m => m.neu).length, n = sicht.length + mehr, merk = "post-k-" + k.konto;
+      eGesamt += n; eUngelesen += u;
+      eHtml += '<details class="mehr post-konto" data-merk="' + esc(merk) + '"' + (om[merk] ? " open" : "") + "><summary><b>" + esc(k.konto) + "</b> " + (n ? n +(u ? ' · <span class="ung">' + u + " ungelesen</span>" : "") : "leer") + "</summary>" +
+        '<div class="liste-innen">' + (sicht.length ? sicht.map(eZeile).join("") : '<p class="zeile">Posteingang leer.</p>') + (mehr ? '<p class="sp-meta">Dazu ' + mehr + " ältere, die hier nicht stehen.</p>" : "") + "</div></details>";
+    });
+    const checkHtml = frisch.map(zeile).join("") + zn.map(znZeile).join("");
+    box.innerHTML = (ein ? eHtml + (checkHtml || aelter.length ? '<p class="post-titel">Vom Check, nicht im Posteingang</p>' + checkHtml : "")
+      : (checkHtml ? checkHtml : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>")) +
       (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
       (fuss.length ? '<p class="sp-meta">' + fuss.map(esc).join(". ") + ".</p>" : "");
     box.querySelectorAll(".td-text").forEach(x => x.onclick = () => { if (Date.now() < postWischBis) return; x.closest(".eintrag").classList.toggle("voll"); });
-    box.querySelectorAll(".post-wisch").forEach(el => wischen(el, null, true));
-    info.textContent = frisch.length + zn.length ? frisch.length + zn.length + " neu" : "";
+    box.querySelectorAll(".post-wisch").forEach(el => wischen(el, el.dataset.e ? eingangAktion : null, true));
+    info.textContent = ein ? (eUngelesen ? eUngelesen + " ungelesen" : eGesamt ? eGesamt + " im Eingang" : "Eingang leer") : (frisch.length + zn.length ? frisch.length + zn.length + " neu" : "");
     postStatus();
+  }
+  // Aktionen auf Mails aus dem Posteingang (seit 24.11.2026): verschwinden sofort, gehen verschlüsselt als {a:"eingang"} an den Server
+  // (todo-sync.ps1, post\eingang-aktion.ps1: Löschen nach Gelöschte Elemente bzw. Gmail-Papierkorb, Archiv, To-do über den nächsten Check)
+  function eingangLokal(ein) {
+    const l = lies(EINGANGLOKAL) || {}, ids = new Set();
+    if (ein) ein.forEach(k => (k.mails || []).forEach(m => ids.add(m.id)));
+    let geaendert = false;
+    Object.keys(l).forEach(id => { if (Date.now() - (l[id].ts || 0) > 2 * 864e5 || (ein && !ids.has(id))) { delete l[id]; geaendert = true; } });
+    if (geaendert) lsSet(EINGANGLOKAL, JSON.stringify(l));
+    return l;
+  }
+  function eingangAktion(el, was) {
+    const id = el.dataset.id, m = postEingangAktuell.find(x => x.id === id);
+    if (!m) return;
+    const t = ((m.von ? m.von + ": " : "") + (m.betreff || "")).slice(0, 300);
+    const l = lies(EINGANGLOKAL) || {}; l[id] = { was, ts: Date.now() }; lsSet(EINGANGLOKAL, JSON.stringify(l));
+    const q = lies(SCHLANGE) || []; q.push({ a: "eingang", was, id, t, h: "eingang-" + id + "-" + was, ts: Date.now() }); lsSet(SCHLANGE, JSON.stringify(q));
+    sendeHaken();
+    postOffen = null; el.classList.add("weg");
+    setTimeout(() => zeichnePost(postZnLetzt), 400); // Zähler im Kopf des Kontos nachziehen, offene Blöcke bleiben offen
   }
   // Postfächer (seit 24.11.2026, Gregors Wunsch): grüner Punkt = wird live geprüft, blau = wird an gregorwieser5 weitergeleitet, rot = nicht verbunden. Kopf zeigt nur die Punkte,
   // die Fläche hinter der Karte die Adressen. Daten aus privat.post.konten (export_app.py post()).
@@ -1305,7 +1545,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     }
     privat = null;
     await entsperren();
-    zeichneZeitung(); zeichneZeitungKarte(); sendeHaken();
+    zeichneZeitung(); zeichneZeitungKarte(); kalSenden(); sendeHaken();
     if (lesen.an && lesen.liste[lesen.pos]) markiereArtikel(lesen.liste[lesen.pos].id); // nach dem Neuzeichnen die laufende Meldung wieder markieren
     if (!datei) wiederherstellen(); // pausierte Wiedergabe von vorher (seit 24.11.2026 abends)
     if (!datei) abgleichPruefen();
@@ -1933,7 +2173,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       el.style.transition = "transform .18s ease"; el.style.transform = "translateY(" + (SCHWELLE - VERSATZ) + "px)"; el.style.opacity = "1";
       schiebe(SCHWELLE, .18);
       if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
-      // Server um einen frischen Abgleich der To-dos mit OneNote bitten (seit 17.11.2026)
+      // Server um einen frischen Abgleich bitten (seit 17.11.2026 To-dos, seit 24.11.2026 auch Aufräumen, Kalender und Post, mit Anzeige oben)
+      abgleichVormerken();
       await abgleichAnfordern();
       if (lesen.an) {
         // Vorlesen nicht abbrechen: nur Zeitung und Startseite neu holen, Haken von vorher wandern in "Erledigt"
