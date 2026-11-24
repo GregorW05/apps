@@ -997,7 +997,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const aufgabe = x => /\b(check|checken|prüfen|pruefen|review|submit|einreichen|erledigen|to-?do|platzhalter|placeholder|reminder|erinnerung|bezahlen|zahlen|pay)\b/i.test((x.wer || "") + " " + (x.text || ""));
     const istTodo = x => (x.art === "termin" && aufgabe(x)) || (x.art === "offen" && /^to-?do$/i.test(x.label || ""));
     const termine = privat.eintraege.filter(x => x.art === "termin" && !istTodo(x));
-    const kalTodo = privat.eintraege.filter(istTodo).map(x => Object.assign({}, x, { art: "offen", label: x.art === "termin" ? de(x.label) : "To-do" }));
+    // Seit 24.11.2026 abhakbar (Gregor: WHU-Punkt aus der Zeitung ließ sich nicht abhaken): Haken blendet lokal sofort aus (wv-info-weg)
+    // und schickt {a:"info"} an den Server, der ihn in zeitung\ausgeblendet.txt schreibt; danach fehlt er auf allen Geräten und in der Zeitung
+    const infoWeg = lies("wv-info-weg") || {}, infoKey = x => String((x.wer || "") + " | " + (x.text || "")).replace(/\s+/g, " ").trim();
+    const kalTodo = privat.eintraege.filter(istTodo).map(x => Object.assign({}, x, { art: "offen", label: x.art === "termin" ? de(x.label) : "To-do" })).filter(x => !infoWeg[infoKey(x)]);
     const neu = privat.eintraege.filter(x => x.art === "neu"), warten = privat.eintraege.filter(x => x.art === "offen" && !istTodo(x));
     const stand = zeitung.erstellt ? new Date(zeitung.erstellt) : null;
     // Seit 22.11.2026 Stundenraster aus dem Outlook-Kalender (privat.kalender), sonst wie vorher die Termine aus der Zeitung als Liste
@@ -1057,7 +1060,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     tb.innerHTML = (kalTodo.length + td.length || wartenHtml ? "" : '<p class="zeile">Nichts offen.</p>') +
       (wartenHtml ? '<div class="warten-block"><p class="block-titel">Warten auf Antwort (' + wtOffen + ")</p>" + wartenHtml + "</div>" : "") +
       (krit.length ? '<div class="prio1"><p class="block-titel">Prio 1, wichtig und zeitkritisch</p>' + krit.map(tdZeile).join("") + "</div>" : "") +
-      kalTodo.map(infoZeile).join("") + sicht.map(tdZeile).join("") +
+      kalTodo.map(x => infoZeile(x).replace('<span class="td-punkt" aria-hidden="true"></span>', '<button type="button" class="haken info-haken" data-info="' + esc(infoKey(x)) + '" aria-pressed="false" aria-label="Erledigt"></button>')).join("") + sicht.map(tdZeile).join("") +
       (rest.length ? '<details class="mehr" data-merk="todos-weitere"' + (om["todos-weitere"] ? " open" : "") + '><summary>' + (sicht.length || kalTodo.length ? "Weitere " : "Alle ") + rest.length + " To-dos</summary><div class=\"liste-innen\">" + rest.map(tdZeile).join("") + "</div></details>" : "") +
       (fertigN ? '<details class="mehr erledigt-block" data-merk="todos-erledigt"' + (om["todos-erledigt"] ? " open" : "") + '><summary>Erledigt (' + fertigN + ")</summary><div class=\"liste-innen\">" + fertigHtml + "</div></details>" : "") +
       '<p class="sp-meta" id="k-todos-sync"></p>';
@@ -1065,7 +1068,16 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       const z = x.closest(".eintrag"), auf = z.classList.toggle("voll"), h = z.dataset.h;
       if (h) { const v = (sitz.get("wv-voll") || []).filter(y => y !== h); if (auf) v.push(h); sitz.set("wv-voll", v); }
     });
-    tb.querySelectorAll(".haken").forEach(b => b.onclick = e => { e.stopPropagation(); const typ = b.dataset.typ || "", x = (typ === "warten" ? wt || [] : td).find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true", typ); });
+    tb.querySelectorAll(".info-haken").forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      const k = b.dataset.info, w = lies("wv-info-weg") || {};
+      Object.keys(w).forEach(x => { if (Date.now() - w[x] > 60 * 864e5) delete w[x]; });
+      w[k] = Date.now(); lsSet("wv-info-weg", JSON.stringify(w));
+      const q = lies(SCHLANGE) || []; q.push({ a: "info", t: k.slice(0, 600), h: "info-" + k.length + "-" + Date.now(), ts: Date.now() }); lsSet(SCHLANGE, JSON.stringify(q));
+      b.textContent = "✓"; b.closest(".eintrag").classList.add("erledigt");
+      setTimeout(() => { zeichneKalender(); sendeHaken(); }, 450);
+    });
+    tb.querySelectorAll(".haken:not(.info-haken)").forEach(b => b.onclick = e => { e.stopPropagation(); const typ = b.dataset.typ || "", x = (typ === "warten" ? wt || [] : td).find(y => y.h === b.dataset.h); setzeHaken(b.dataset.h, x ? x.t : "", b.getAttribute("aria-pressed") !== "true", typ); });
     tb.querySelectorAll(".todo-wisch").forEach(el => wischen(el, todoWisch));
     hakenInfo();
     // Neue Antworten (Morgenzeitung) stehen seit 24.11.2026 in der Karte Post, nicht mehr bei den To-dos (Gregor: sind Infos, nichts zum Abhaken)
