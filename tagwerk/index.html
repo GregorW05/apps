@@ -149,10 +149,12 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .kp .pp.an { background: #5BE39A; } .kp .pp.an::after { background: #5BE39A; } .kp .pp.aus { background: #FF9AA6; } .kp .pp.weiter { background: #8EC5FF; box-shadow: 0 0 7px 1px rgba(142, 197, 255, .75); } .kp .pp.weiter::after { background: #8EC5FF; }
 .post-koerper { position: relative; overflow: hidden; margin: 0 -16px -16px; }
 .post-schieber { position: relative; z-index: 1; display: grid; gap: 10px; padding: 0 16px 16px; background: var(--surface); touch-action: pan-y;
-  transform: translate3d(0, 0, 0); transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s; }
-.post-koerper.zieht .post-schieber { transition: none; }
+  transform: translate3d(0, 0, 0); transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s, min-height .3s ease; }
+.post-schieber { align-content: start; }
+/* Seit 24.11. abends: beim Aufziehen wächst die Karte auf die Höhe der Postfach-Liste (min-height per JS), auch während des Ziehens weich */
+.post-koerper.zieht .post-schieber { transition: min-height .25s ease; }
 .post-koerper.zieht .post-schieber, .post-koerper.auf .post-schieber { box-shadow: 8px 0 14px -8px rgba(6, 20, 34, .35); }
-.post-konten { position: absolute; top: 0; right: 0; bottom: 0; width: 236px; padding: 2px 16px 16px 14px; display: grid; align-content: start; gap: 12px;
+.post-konten { position: absolute; top: 0; right: 0; bottom: 0; width: min(292px, calc(100% - 44px)); padding: 2px 16px 16px 14px; display: grid; align-content: start; gap: 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: var(--surface-2); visibility: hidden; }
 .post-koerper.zieht .post-konten, .post-koerper.auf .post-konten, .post-koerper.schliesst .post-konten { visibility: visible; }
 .pk-titel { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
@@ -160,8 +162,9 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .pk .pp { margin-top: 5px; }
 .pk b { display: block; font-size: .84rem; font-weight: 650; overflow-wrap: anywhere; line-height: 1.3; }
 .pk span { display: block; font-size: .76rem; color: var(--muted); line-height: 1.3; }
-.pk span.live { color: var(--gruen); font-weight: 700; }
-.pk span.weiter { color: var(--blau-pp); font-weight: 700; }
+.pk em { font-style: normal; font-weight: 700; color: var(--rot); }
+.pk em.live { color: var(--gruen); }
+.pk em.weiter { color: var(--blau-pp); }
 .pf-balken { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .pf-balken i { display: block; height: 100%; background: linear-gradient(90deg, var(--ozean), var(--cyan)); transform-origin: left center; transform: scaleX(0); transition: transform 1s linear; will-change: transform; }
 /* Wischen (seit 24.11.2026): Mail nach links oder rechts ziehen, darunter To-do, Archiv, Löschen (rechts bzw. links) */
@@ -958,14 +961,17 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     $("k-post-punkte").innerHTML = k.map(x => '<i class="pp ' + art(x) + '"></i>').join("");
     $("k-post-punkte").title = k.map(x => x.adresse + " " + wort[art(x)]).join(", ");
     $("post-konten").innerHTML = '<p class="pk-titel">Postfächer im Check</p>' + k.map(x => '<div class="pk"><i class="pp ' + art(x) + '"></i><div><b>' + esc(x.adresse) + "</b>" +
-      '<span class="' + (art(x) === "an" ? "live" : art(x) === "weiter" ? "weiter" : "") + '">' + wort[art(x)] + "</span><span>" + esc(x.info || "") + "</span></div></div>").join("");
+      '<span><em class="' + (art(x) === "an" ? "live" : art(x) === "weiter" ? "weiter" : "") + '">' + wort[art(x)] + "</em>" + (x.info ? " · " + esc(x.info) : "") + "</span></div></div>").join("");
   }
   // Karte nach links ziehen, seit 24.11. abends auch auf einer Mail (Gregors Wunsch): darunter erscheinen rechts die Postfächer.
   // Auf einer Mail entscheidet die erste Bewegung: nach rechts gehört sie der Mail (Knöpfe), nach links der Karte.
   (function () {
     const k = $("post-koerper"), sch = $("post-schieber"), breite = () => $("post-konten").offsetWidth;
     let s = null, bis = 0;
+    // Karte so hoch wie die Postfach-Liste, damit alle Adressen ohne Scrollen zu sehen sind (Gregor 24.11. abends)
+    const hoehe = an => { sch.style.minHeight = an ? $("post-konten").scrollHeight + "px" : ""; };
     function setze(auf) {
+      hoehe(auf);
       k.classList.add("schliesst"); clearTimeout(k._zu); k._zu = setTimeout(() => k.classList.remove("schliesst"), 340);
       k.classList.toggle("auf", auf); sch.style.transform = auf ? "translate3d(" + -breite() + "px,0,0)" : "";
       $("k-post-punkte").setAttribute("aria-expanded", String(auf));
@@ -985,7 +991,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         if (s.zeile && !k.classList.contains("auf") && (dx > 0 || s.zeile.classList.contains("auf"))) { s = null; return; }
         if (postOffen) wischZu(postOffen);
         try { k.setPointerCapture(e.pointerId); } catch (x) {}
-        k.classList.add("zieht");
+        k.classList.add("zieht"); hoehe(true);
       }
       const b = breite(); let x = s.basis + dx;
       if (x > 0) x *= 0.25; else if (x < -b) x = -b + (x + b) * 0.3;
