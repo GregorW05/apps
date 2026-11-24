@@ -141,7 +141,12 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .pp.an::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: var(--gruen); opacity: 0; animation: post-puls 2.4s ease-out infinite; }
 @keyframes post-puls { 0% { transform: scale(.5); opacity: .55; } 100% { transform: scale(1.9); opacity: 0; } }
 .pp.aus { background: var(--rot); }
-.kp .pp.an { background: #5BE39A; } .kp .pp.an::after { background: #5BE39A; } .kp .pp.aus { background: #FF9AA6; }
+.pp.weiter { background: var(--blau-pp); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--blau-pp) 70%, transparent); }
+/* Weiterleitung aktiv (Gregor 24.11.): blau leuchtend, pulsiert wie die grünen, leicht versetzt */
+.pp.weiter::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: var(--blau-pp); opacity: 0; animation: post-puls 2.4s ease-out 1.2s infinite; }
+.karte.post { --blau-pp: #2F7FD8; }
+@media (prefers-color-scheme: dark) { .karte.post { --blau-pp: #6CB2FF; } }
+.kp .pp.an { background: #5BE39A; } .kp .pp.an::after { background: #5BE39A; } .kp .pp.aus { background: #FF9AA6; } .kp .pp.weiter { background: #8EC5FF; box-shadow: 0 0 7px 1px rgba(142, 197, 255, .75); } .kp .pp.weiter::after { background: #8EC5FF; }
 .post-koerper { position: relative; overflow: hidden; margin: 0 -16px -16px; }
 .post-schieber { position: relative; z-index: 1; display: grid; gap: 10px; padding: 0 16px 16px; background: var(--surface); touch-action: pan-y;
   transform: translate3d(0, 0, 0); transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s; }
@@ -156,6 +161,7 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .pk b { display: block; font-size: .84rem; font-weight: 650; overflow-wrap: anywhere; line-height: 1.3; }
 .pk span { display: block; font-size: .76rem; color: var(--muted); line-height: 1.3; }
 .pk span.live { color: var(--gruen); font-weight: 700; }
+.pk span.weiter { color: var(--blau-pp); font-weight: 700; }
 .pf-balken { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .pf-balken i { display: block; height: 100%; background: linear-gradient(90deg, var(--ozean), var(--cyan)); transform-origin: left center; transform: scaleX(0); transition: transform 1s linear; will-change: transform; }
 /* Wischen (seit 24.11.2026): Mail nach links oder rechts ziehen, darunter To-do, Archiv, Löschen (rechts bzw. links) */
@@ -903,7 +909,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     let geaendert = false;
     Object.keys(l).forEach(id => {
       const x = l[id], m = alle.find(y => y.id === id), alt = Date.now() - (x.ts || 0) > 2 * 864e5;
-      if (alt || (x.was !== "todo" && !ids.includes(id)) || (x.was === "todo" && m && /^Auf die To-do-Liste/.test(m.aktion || ""))) { delete l[id]; geaendert = true; }
+      if (alt || !m) { delete l[id]; geaendert = true; }
     });
     if (geaendert) lsSet(POSTLOKAL, JSON.stringify(l));
     return l;
@@ -914,18 +920,18 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     zeichneKonten(privat.post && privat.post.konten);
     knopf.hidden = false;
     const p = privat.post || null, alle = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
-    const lokal = postLokal(alle), mails = alle.filter(m => !(lokal[m.id] && lokal[m.id].was !== "todo"));
+    const lokal = postLokal(alle), mails = alle.filter(m => !lokal[m.id]); // seit 24.11. abends verschwinden alle drei Aktionen sofort
     postMailsAktuell = mails;
     // Antworten, die nur die Morgenzeitung kennt (Absender noch nicht in der Post), weiter zeigen
     const zn = (zeitungsNeu || []).filter(x => !alle.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von)))));
     const grenze = Date.now() - 24 * 3600e3, frisch = mails.filter(m => Date.parse(m.zeit) >= grenze), aelter = mails.filter(m => !(Date.parse(m.zeit) >= grenze));
-    const knoepfe = m => m.quelle === "Gmail" ? ["todo", "ausblenden"] : ["todo", "archiv", "loeschen"];
+    const knoepfe = () => ["todo", "archiv", "loeschen"]; // auch bei Gmail (Gregor 24.11.): nichts mehr nur ausblenden
     const zeile = m => {
       // Seit 24.11.2026: bei Gmail steht dabei, an welche Adresse die Mail ging (weitergeleitete alte Konten)
       const anKurz = { "gregorwieser5@gmail.com": "Gmail", "wieser.gregor5103@gmail.com": "an 5103", "wieser.gregor.paypal@gmail.com": "an PayPal-Gmail", "gregor.wieser@munich-business-school.de": "an MBS" }[String(m.an || "").toLowerCase()] || (m.quelle === "Gmail" ? "Gmail" : "");
-      const l = lokal[m.id], meta = l && l.was === "todo" ? "Kommt auf die To-do-Liste …" : [m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), anKurz].filter(Boolean).join(" · ");
+      const meta = [m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), anKurz].filter(Boolean).join(" · ");
       const gruppe = seite => '<div class="post-aktionen ' + seite + '">' + knoepfe(m).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>";
-      return '<div class="post-wisch" data-id="' + esc(m.id) + '">' + gruppe("links") + gruppe("rechts") +
+      return '<div class="post-wisch" data-id="' + esc(m.id) + '">' + gruppe("links") +
         '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
     };
     const znZeile = x => '<div class="eintrag todo post-zeile" data-art="antwort"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta">Antwort, aus der Morgenzeitung</p></div></div>';
@@ -934,26 +940,28 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
     if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
     if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
-    if (mails.length) fuss.push("Mail zur Seite ziehen für To-do, Archiv oder Löschen, Karte oben nach links ziehen zeigt die Postfächer");
+    if (mails.length) fuss.push("Mail nach rechts ziehen für To-do, Archiv oder Löschen, nach links ziehen zeigt die Postfächer");
     postOffen = null;
     box.innerHTML = (frisch.length || zn.length ? frisch.map(zeile).join("") + zn.map(znZeile).join("") : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>") +
       (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
       (fuss.length ? '<p class="sp-meta">' + fuss.map(esc).join(". ") + ".</p>" : "");
     box.querySelectorAll(".td-text").forEach(x => x.onclick = () => { if (Date.now() < postWischBis) return; x.closest(".eintrag").classList.toggle("voll"); });
-    box.querySelectorAll(".post-wisch").forEach(wischen);
+    box.querySelectorAll(".post-wisch").forEach(el => wischen(el, null, true));
     info.textContent = frisch.length + zn.length ? frisch.length + zn.length + " neu" : "";
     postStatus();
   }
-  // Postfächer (seit 24.11.2026, Gregors Wunsch): grüner Punkt = wird live geprüft, rot = nicht verbunden. Kopf zeigt nur die Punkte,
+  // Postfächer (seit 24.11.2026, Gregors Wunsch): grüner Punkt = wird live geprüft, blau = wird an gregorwieser5 weitergeleitet, rot = nicht verbunden. Kopf zeigt nur die Punkte,
   // die Fläche hinter der Karte die Adressen. Daten aus privat.post.konten (export_app.py post()).
   function zeichneKonten(konten) {
     const k = Array.isArray(konten) ? konten : [];
-    $("k-post-punkte").innerHTML = k.map(x => '<i class="pp ' + (x.live ? "an" : "aus") + '"></i>').join("");
-    $("k-post-punkte").title = k.map(x => x.adresse + (x.live ? " live" : " aus")).join(", ");
-    $("post-konten").innerHTML = '<p class="pk-titel">Postfächer im Check</p>' + k.map(x => '<div class="pk"><i class="pp ' + (x.live ? "an" : "aus") + '"></i><div><b>' + esc(x.adresse) + "</b>" +
-      '<span class="' + (x.live ? "live" : "") + '">' + (x.live ? "live" : "nicht verbunden") + "</span><span>" + esc(x.info || "") + "</span></div></div>").join("");
+    const art = x => x.live ? "an" : x.weiter ? "weiter" : "aus", wort = { an: "live", weiter: "weitergeleitet", aus: "nicht verbunden" };
+    $("k-post-punkte").innerHTML = k.map(x => '<i class="pp ' + art(x) + '"></i>').join("");
+    $("k-post-punkte").title = k.map(x => x.adresse + " " + wort[art(x)]).join(", ");
+    $("post-konten").innerHTML = '<p class="pk-titel">Postfächer im Check</p>' + k.map(x => '<div class="pk"><i class="pp ' + art(x) + '"></i><div><b>' + esc(x.adresse) + "</b>" +
+      '<span class="' + (art(x) === "an" ? "live" : art(x) === "weiter" ? "weiter" : "") + '">' + wort[art(x)] + "</span><span>" + esc(x.info || "") + "</span></div></div>").join("");
   }
-  // Karte nach links ziehen (nicht auf einer Mail, die hat ihr eigenes Wischen): darunter erscheinen rechts die Postfächer
+  // Karte nach links ziehen, seit 24.11. abends auch auf einer Mail (Gregors Wunsch): darunter erscheinen rechts die Postfächer.
+  // Auf einer Mail entscheidet die erste Bewegung: nach rechts gehört sie der Mail (Knöpfe), nach links der Karte.
   (function () {
     const k = $("post-koerper"), sch = $("post-schieber"), breite = () => $("post-konten").offsetWidth;
     let s = null, bis = 0;
@@ -963,8 +971,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       $("k-post-punkte").setAttribute("aria-expanded", String(auf));
     }
     k.addEventListener("pointerdown", e => {
-      if ((e.pointerType === "mouse" && e.button !== 0) || e.target.closest(".post-wisch, button, a")) return;
-      s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis: k.classList.contains("auf") ? -breite() : 0, rich: null, punkte: [{ x: e.clientX, t: performance.now() }], pos: 0 };
+      if ((e.pointerType === "mouse" && e.button !== 0) || e.target.closest("button, a")) return;
+      s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis: k.classList.contains("auf") ? -breite() : 0, rich: null, punkte: [{ x: e.clientX, t: performance.now() }], pos: 0, zeile: e.target.closest(".post-wisch") };
     });
     k.addEventListener("pointermove", e => {
       if (!s || e.pointerId !== s.id) return;
@@ -974,6 +982,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
         s.rich = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (s.rich === "v") { s = null; return; }
+        if (s.zeile && !k.classList.contains("auf") && (dx > 0 || s.zeile.classList.contains("auf"))) { s = null; return; }
+        if (postOffen) wischZu(postOffen);
         try { k.setPointerCapture(e.pointerId); } catch (x) {}
         k.classList.add("zieht");
       }
@@ -1003,10 +1013,12 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     el.classList.add("schliesst"); clearTimeout(el._zu); el._zu = setTimeout(() => { el.classList.remove("schliesst"); if (!el.classList.contains("auf") && !el.classList.contains("zieht")) delete el.dataset.seite; }, 320);
     el.classList.remove("auf"); el.querySelector(".post-zeile").style.transform = ""; if (postOffen === el) postOffen = null;
   }
-  // Seit 24.11.2026 abends in beide Richtungen (Gregors Wunsch): nach links zeigt die Knöpfe rechts, nach rechts die Knöpfe links.
+  // Seit 24.11.2026 abends in beide Richtungen: nach links zeigt die Knöpfe rechts (To-dos), nach rechts die Knöpfe links (To-dos und Mails).
   // Tempo über die letzten 100 ms wie beim Player, damit ein kurzes zügiges Wischen reicht.
-  function wischen(el, beiKnopf) {
-    const z = el.querySelector(".post-zeile"), bR = () => el.querySelector(".post-aktionen.rechts").offsetWidth, bL = () => el.querySelector(".post-aktionen.links").offsetWidth;
+  // karte = true (Mails, seit 24.11. abends): nur Knöpfe links, Wischen nach links übernimmt die Karte (Postfächer)
+  function wischen(el, beiKnopf, karte) {
+    const z = el.querySelector(".post-zeile"), breiteVon = q => { const g = el.querySelector(q); return g ? g.offsetWidth : 0; };
+    const bR = () => breiteVon(".post-aktionen.rechts"), bL = () => breiteVon(".post-aktionen.links");
     let s = null;
     z.addEventListener("pointerdown", e => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -1021,6 +1033,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
         s.rich = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (s.rich === "v") { s = null; return; }
+        if (karte && ($("post-koerper").classList.contains("auf") || (dx < 0 && !el.classList.contains("auf")))) { s = null; return; }
         try { z.setPointerCapture(e.pointerId); } catch (x) {}
         el.classList.add("zieht"); clearTimeout(el._zu); el.classList.remove("schliesst");
         if (postOffen && postOffen !== el) wischZu(postOffen);
@@ -1109,11 +1122,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const l = lies(POSTLOKAL) || {}; l[id] = { was, ts: Date.now() }; lsSet(POSTLOKAL, JSON.stringify(l));
     const q = lies(SCHLANGE) || []; q.push({ a: "mail", was, id, t, h: "mail-" + id + "-" + was, ts: Date.now() }); lsSet(SCHLANGE, JSON.stringify(q));
     sendeHaken();
-    if (was === "todo") { wischZu(el); const meta = el.querySelector(".td-meta"); if (meta) meta.textContent = "Kommt auf die To-do-Liste …"; }
-    else {
-      postOffen = null; el.classList.add("weg");
-      setTimeout(() => { el.remove(); const n = $("k-post").querySelectorAll(".post-wisch").length; if (!n && !$("k-post").querySelector(".post-zeile")) $("k-post").insertAdjacentHTML("afterbegin", '<p class="zeile">Alles erledigt.</p>'); }, 400);
-    }
+    // Seit 24.11.2026 abends (Gregors Wunsch): alle drei verschwinden sofort, der Server arbeitet das Postfach danach ab
+    // (Outlook Löschen/Archiv sofort, To-do und Gmail über den nächsten Check, Claude liest die Mail und legt To-do mit Frist an)
+    postOffen = null; el.classList.add("weg");
+    setTimeout(() => { el.remove(); const n = $("k-post").querySelectorAll(".post-wisch").length; if (!n && !$("k-post").querySelector(".post-zeile")) $("k-post").insertAdjacentHTML("afterbegin", '<p class="zeile">Alles erledigt.</p>'); }, 400);
   }
   function postStatus() {
     const st = $("k-post-stand"), knopf = $("k-post-jetzt"), p = privat && privat.post, seit = sitz.get(POSTANFRAGE), f = p && p.fortschritt;
@@ -1210,7 +1222,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       while (true) {
         const offen = lies(SCHLANGE) || [];
         if (!offen.length) break;
-        const r = await fetch("https://ntfy.sh/" + thema, { method: "POST", body: JSON.stringify(await verschluessle(offen[0], k)) });
+        // Seit 24.11. abends mit Zeitlimit: ein hängender Versand (iOS im Hintergrund) blockierte sonst alle weiteren
+        const ab = window.AbortController ? new AbortController() : null, uhr = ab && setTimeout(() => ab.abort(), 15000);
+        const r = await fetch("https://ntfy.sh/" + thema, Object.assign({ method: "POST", body: JSON.stringify(await verschluessle(offen[0], k)) }, ab ? { signal: ab.signal } : {}));
+        if (uhr) clearTimeout(uhr);
         if (!r.ok) break;
         lsSet(SCHLANGE, JSON.stringify((lies(SCHLANGE) || []).filter(x => !(x.h === offen[0].h && x.ts === offen[0].ts))));
       }
@@ -1268,6 +1283,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   document.addEventListener("visibilitychange", () => { if (!document.hidden && !abgleichUhr) abgleichPruefen(); });
   window.addEventListener("online", sendeHaken);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) sendeHaken(); });
+  // Wartet noch etwas in der Schlange (Haken, Fristen, Mailaktionen), alle 20 Sekunden neu versuchen (seit 24.11.2026 abends)
+  setInterval(() => { if (!document.hidden && (lies(SCHLANGE) || []).length) sendeHaken(); }, 20000);
+  window.addEventListener("online", () => sendeHaken());
 
   // ---------- Zeitung ----------
   async function ladeZeitung(datei) {
