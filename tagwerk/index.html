@@ -211,6 +211,19 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 .mini-zu svg { width: 20px !important; height: 20px !important; }
 .mini-balken { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .18); }
 .mini-balken i { display: block; height: 100%; width: 0; background: var(--cyan); }
+/* Aufklappen (seit 24.11.2026): Tippen auf den Player faehrt ihn nach oben aus, darin die Stimmen */
+.mini-karte { cursor: pointer; }
+.mini-griff { position: absolute; top: 4px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, .35); }
+.mini-mehr { display: grid; grid-template-rows: 0fr; margin-top: -6px; transition: grid-template-rows .28s ease, margin-top .28s ease; }
+.mini-mehr > div { overflow: hidden; min-height: 0; }
+.mini.offen .mini-mehr { grid-template-rows: 1fr; margin-top: 0; }
+.mini-label { margin: 6px 0 6px; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9FC3DA; }
+.mini-stimmen { display: grid; gap: 6px; padding-bottom: 8px; }
+.mini .mini-stimme { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 8px; background: rgba(255, 255, 255, .09); color: #fff; font: inherit; font-size: .95rem; font-weight: 600; text-align: left; }
+.mini .mini-stimme span { font-size: .8rem; font-weight: 500; color: #9FC3DA; }
+.mini .mini-stimme[aria-checked="true"] { background: #fff; color: var(--navy); }
+.mini .mini-stimme[aria-checked="true"] span { color: var(--petrol); }
+.mini-hinweis { margin: 0 0 8px; font-size: .85rem; color: #9FC3DA; }
 html.mit-mini .ansicht { padding-bottom: calc(var(--leiste) + 150px + env(safe-area-inset-bottom, 0px)); }
 html.laptop .mini { bottom: 14px; }
 .zt .fussleiste { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
@@ -406,8 +419,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
 <section id="v-lernen" class="rahmen" aria-label="Lernen" hidden><div class="laedt">Lernkartei lädt</div><iframe title="Lernkartei" data-src="../lernkartei/?einbetten=1"></iframe></section>
 <section id="v-essen" class="rahmen" aria-label="Essen" hidden><div class="laedt">Meal Prep lädt</div><iframe title="Meal Prep" data-src="../mealprep/?einbetten=1"></iframe></section>
 
-<div class="mini" id="mini" aria-label="Wiedergabe" aria-hidden="true"><div class="mini-karte">
-  <div class="mini-text"><b id="mini-titel"></b><span id="mini-ressort"></span></div>
+<div class="mini" id="mini" aria-label="Wiedergabe" aria-hidden="true"><div class="mini-karte" id="mini-karte">
+  <span class="mini-griff" aria-hidden="true"></span>
+  <div class="mini-text" id="mini-auf" role="button" tabindex="0" aria-expanded="false" aria-controls="mini-mehr" aria-label="Player öffnen, Stimme wählen"><b id="mini-titel"></b><span id="mini-ressort"></span></div>
   <div class="mini-reihe">
     <span class="mini-zeit" id="mini-zeit"></span>
     <button type="button" id="mini-zurueck" aria-label="10 Sekunden zurück"><svg viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.2 3.6v4.6h4.6"/><text x="12" y="15.6" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui,sans-serif">10</text></svg></button>
@@ -415,6 +429,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     <button type="button" id="mini-vor" aria-label="10 Sekunden vor"><svg viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.8 3.6v4.6h-4.6"/><text x="12" y="15.6" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui,sans-serif">10</text></svg></button>
     <button type="button" id="mini-zu" class="mini-zu" aria-label="Player schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
+  <div class="mini-mehr" id="mini-mehr"><div><p class="mini-label">Stimme</p><div class="mini-stimmen" id="mini-stimmen" role="radiogroup" aria-label="Stimme"></div></div></div>
   <div class="mini-balken"><i id="mini-fort"></i></div>
 </div></div>
 <div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path class="spitze" d="M5 8.4 7.9 12.6H2.1z"/></svg></div>
@@ -971,8 +986,29 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const s = zeitung && zeitung.audioStimmen, ids = s && typeof s === "object" ? Object.keys(s) : [], sel = $("z-stimme");
     sel.hidden = ids.length < 2;
     sel.innerHTML = ids.map(id => '<option value="' + esc(id) + '">' + esc(s[id].titel || id) + "</option>").join("");
-    if (ids.length) sel.value = ids.includes(stimmWahl) ? stimmWahl : ids[0];
+    const aktiv = ids.includes(stimmWahl) ? stimmWahl : ids[0];
+    if (ids.length) sel.value = aktiv;
+    // Dieselbe Auswahl im aufgeklappten Player, als große Knöpfe: "Heart (USA, Frau)" wird zu Heart mit Zusatz USA, Frau
+    $("mini-stimmen").innerHTML = ids.length < 2 ? '<p class="mini-hinweis">' + (zeitungIstHeute ? "Die weiteren Stimmen kommen in ein paar Minuten." : "Ältere Ausgaben gibt es nur in einer Stimme.") + "</p>" :
+      ids.map(id => { const t = String(s[id].titel || id), m = t.match(/^(.*?)\s*\((.*)\)$/);
+        return '<button type="button" class="mini-stimme" role="radio" data-id="' + esc(id) + '" aria-checked="' + (id === aktiv) + '">' + esc(m ? m[1] : t) + (m ? "<span>" + esc(m[2]) + "</span>" : "") + "</button>"; }).join("");
+    $("mini-stimmen").querySelectorAll(".mini-stimme").forEach(b => b.onclick = () => waehleStimme(b.dataset.id));
   }
+  // Andere Stimme: läuft gerade etwas, an derselben Meldung in der neuen Stimme neu beginnen
+  function waehleStimme(id, erzwingen) {
+    if (!id || (!erzwingen && id === $("z-stimme").value)) return;
+    stimmWahl = id; lsSet("wv-stimme", id); $("z-stimme").value = id;
+    $("mini-stimmen").querySelectorAll(".mini-stimme").forEach(b => b.setAttribute("aria-checked", String(b.dataset.id === id)));
+    if (lesen.an) { const a = lesen.liste[lesen.pos]; vorlesen(a ? a.id : undefined); }
+  }
+  function miniOffen(an) {
+    $("mini").classList.toggle("offen", an);
+    $("mini-auf").setAttribute("aria-expanded", String(an));
+    $("mini-auf").setAttribute("aria-label", an ? "Player zuklappen" : "Player öffnen, Stimme wählen");
+  }
+  // Tippen irgendwo auf den Player (außer auf Knöpfe) klappt ihn auf und wieder zu
+  $("mini-karte").addEventListener("click", e => { if (e.target.closest("button, .mini-mehr")) return; miniOffen(!$("mini").classList.contains("offen")); });
+  $("mini-auf").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); miniOffen(!$("mini").classList.contains("offen")); } });
   function gesamtAudio(alle) {
     const s = zeitung && zeitung.audioStimmen, w = s && s[stimmWahl];
     const g = passt(w, alle.length) ? w : zeitung && zeitung.audioGesamt;
@@ -1009,7 +1045,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (zeitungNeu && zeitungIstHeute) { zeitungNeu = false; ladeZeitung(); }
     if (document.hidden) neuWennFrei();
   }
-  function miniZeigen(an) { $("mini").classList.toggle("an", an); $("mini").setAttribute("aria-hidden", String(!an)); document.documentElement.classList.toggle("mit-mini", an); if (!an) { $("mini-fort").style.width = "0"; $("mini-zeit").textContent = ""; } }
+  function miniZeigen(an) { if (!an) miniOffen(false); $("mini").classList.toggle("an", an); $("mini").setAttribute("aria-hidden", String(!an)); document.documentElement.classList.toggle("mit-mini", an); if (!an) { $("mini-fort").style.width = "0"; $("mini-zeit").textContent = ""; } }
   function vorlesen(abId) {
     if (!zeitung) return;
     anhalten(); warteSeit = 0;
@@ -1186,11 +1222,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("mini-zurueck").onclick = () => sprung(-10);
   $("mini-vor").onclick = () => sprung(10);
   $("mini-zu").onclick = stopp;
-  // Andere Stimme: läuft gerade etwas, an derselben Meldung in der neuen Stimme neu beginnen
-  $("z-stimme").onchange = () => {
-    stimmWahl = $("z-stimme").value; lsSet("wv-stimme", stimmWahl);
-    if (lesen.an) { const a = lesen.liste[lesen.pos]; vorlesen(a ? a.id : undefined); }
-  };
+  $("z-stimme").onchange = () => waehleStimme($("z-stimme").value, true);
   $("z-tempo").onchange = () => {
     tempo = Number($("z-tempo").value) || 1; lsSet("wv-tempo", String(tempo)); leseLeiste();
     if (!lesen.an) return;
