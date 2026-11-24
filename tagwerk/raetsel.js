@@ -177,25 +177,50 @@
   }
 
   // ---------- Zahlenziel: aus sechs Zahlen mit + − × ÷ genau das Ziel treffen ----------
-  // Seit 24.11.2026 leichter (Gregor: zu schwer): Lösung mit genau drei Zahlen, nur + − ×, Ziel 20 bis 150, eine größere Zahl (10, 25 oder 50).
-  // Vorher vier bis fünf Zahlen, auch ÷, Ziel bis 999. Dazu ein Tipp-Knopf (erst die drei Zahlen, dann der erste Schritt).
+  // Stufen: bis 23.11. vier bis fünf Zahlen, auch ÷, Ziel bis 999 (Gregor: zu schwer); am 24.11. genau drei Zahlen, nur + − ×,
+  // Ziel 20 bis 150 (Gregor: zu leicht). Seit 24.11.2026 abends die Mitte: Lösung mit genau vier Zahlen, + − × und ÷ ohne Rest,
+  // Ziel 100 bis 400, und mit höchstens drei Zahlen ist das Ziel garantiert nicht zu treffen (kein schneller Weg).
+  // Tipp-Knopf: erst die vier Zahlen, dann der erste Schritt.
+  const verknüpfe = (a, b) => { const r = [a + b, a * b]; if (a !== b) r.push(Math.abs(a - b)); if (b > 1 && a % b === 0) r.push(a / b); if (a > 1 && b % a === 0) r.push(b / a); return r; };
+  function erreichbar(werte) { // alle positiven ganzen Ergebnisse, die genau diese Zahlen (jede einmal) liefern
+    if (werte.length === 1) return new Set(werte);
+    const aus = new Set(), n = werte.length;
+    for (let m = 1; m < (1 << n) - 1; m += 2) { // jede Aufteilung in zwei Gruppen einmal (erste Zahl immer links)
+      const l = [], r = [];
+      werte.forEach((w, i) => (m >> i & 1 ? l : r).push(w));
+      for (const a of erreichbar(l)) for (const b of erreichbar(r)) verknüpfe(a, b).forEach(x => aus.add(x));
+    }
+    return aus;
+  }
+  function mitDreiTreffbar(pool, ziel) {
+    for (let m = 1; m < (1 << pool.length); m++) {
+      const t = pool.filter((_, i) => m >> i & 1);
+      if (t.length <= 3 && erreichbar(t).has(ziel)) return true;
+    }
+    return false;
+  }
+  // nur falls der Generator nichts findet (im Test über 800 Tage nie nötig), geprüft: mit drei Zahlen nicht lösbar
+  const ERSATZ_AUFGABE = { zahlen: [8, 4, 50, 9, 3, 5], ziel: 262, weg: "((50 + 4) × 5) − 8", schritte: ["50 + 4 = 54", "54 × 5 = 270", "270 − 8 = 262"], benutzt: [50, 4, 5, 8] };
   function zahlenAufgabe(rnd) {
-    for (let v = 0; v < 600; v++) {
-      const g = [10, 25, 50], k = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 2, 3, 4, 5, 6, 7, 8, 9], pool = [g[Math.floor(rnd() * g.length)]];
+    for (let v = 0; v < 3000; v++) {
+      const g = [25, 50, 75, 100], k = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 2, 3, 4, 5, 6, 7, 8, 9], pool = [g[Math.floor(rnd() * g.length)]];
       while (pool.length < 6) pool.push(k.splice(Math.floor(rnd() * k.length), 1)[0]);
-      const w = mische(pool.map(x => ({ v: x, t: String(x) })), rnd).slice(0, 3), benutzt = w.map(x => x.v), schritte = [];
+      const w = mische(pool.map(x => ({ v: x, t: String(x) })), rnd).slice(0, 4), benutzt = w.map(x => x.v), schritte = [];
       while (w.length > 1) {
         const a = w.splice(Math.floor(rnd() * w.length), 1)[0], b = w.splice(Math.floor(rnd() * w.length), 1)[0], ops = [];
-        ops.push({ v: a.v + b.v, t: "(" + a.t + " + " + b.t + ")", s: a.v + " + " + b.v + " = " + (a.v + b.v) });
-        if (a.v > 1 && b.v > 1 && a.v * b.v <= 200) { const s = a.v + " × " + b.v + " = " + a.v * b.v; ops.push({ v: a.v * b.v, t: "(" + a.t + " × " + b.t + ")", s }, { v: a.v * b.v, t: "(" + a.t + " × " + b.t + ")", s }); }
-        if (a.v !== b.v) { const [x, y] = a.v > b.v ? [a, b] : [b, a]; ops.push({ v: x.v - y.v, t: "(" + x.t + " − " + y.t + ")", s: x.v + " − " + y.v + " = " + (x.v - y.v) }); }
+        const [x, y] = a.v >= b.v ? [a, b] : [b, a];
+        ops.push({ v: x.v + y.v, t: "(" + x.t + " + " + y.t + ")", s: x.v + " + " + y.v + " = " + (x.v + y.v) });
+        if (y.v > 1 && x.v * y.v <= 600) { const o = { v: x.v * y.v, t: "(" + x.t + " × " + y.t + ")", s: x.v + " × " + y.v + " = " + x.v * y.v }; ops.push(o, o); }
+        if (x.v !== y.v) ops.push({ v: x.v - y.v, t: "(" + x.t + " − " + y.t + ")", s: x.v + " − " + y.v + " = " + (x.v - y.v) });
+        if (y.v > 1 && x.v % y.v === 0) ops.push({ v: x.v / y.v, t: "(" + x.t + " ÷ " + y.t + ")", s: x.v + " ÷ " + y.v + " = " + x.v / y.v });
         const o = ops[Math.floor(rnd() * ops.length)];
         schritte.push(o.s); w.push({ v: o.v, t: o.t });
       }
       const z = w[0];
-      if (z.v >= 20 && z.v <= 150 && !pool.includes(z.v)) return { zahlen: mische(pool, rnd), ziel: z.v, weg: z.t.replace(/^\((.*)\)$/, "$1"), schritte, benutzt };
+      if (z.v < 100 || z.v > 400 || pool.includes(z.v) || mitDreiTreffbar(pool, z.v)) continue;
+      return { zahlen: mische(pool, rnd), ziel: z.v, weg: z.t.replace(/^\((.*)\)$/, "$1"), schritte, benutzt };
     }
-    return { zahlen: [25, 4, 7, 3, 2, 9], ziel: 107, weg: "25 × 4 + 7", schritte: ["25 × 4 = 100", "100 + 7 = 107"], benutzt: [25, 4, 7] };
+    return ERSATZ_AUFGABE;
   }
   function zahlen(box, rnd, fertig) {
     const A = zahlenAufgabe(rnd);
@@ -203,7 +228,7 @@
     const neu = () => { kacheln = A.zahlen.map((v, i) => ({ v, id: "z" + i })); verlauf = []; sel = null; op = null; };
     neu();
     function zeichne(msg) {
-      let h = '<p class="sp-text">Triff mit den Zahlen genau das Ziel. Drei Zahlen reichen, jede höchstens einmal.</p>';
+      let h = '<p class="sp-text">Triff mit den Zahlen genau das Ziel, jede höchstens einmal. Mit drei Zahlen geht es nicht, du brauchst vier.</p>';
       h += '<p class="sp-ziel">Ziel <b>' + A.ziel + "</b></p><div class=\"kacheln\">";
       kacheln.forEach(k => { h += '<button type="button" class="kachel' + (sel === k.id ? " sel" : "") + (k.v === A.ziel ? " treffer" : "") + '" data-k="' + k.id + '">' + fmt(k.v) + "</button>"; });
       h += '</div><div class="ops">' + ["+", "−", "×", "÷"].map(o => '<button type="button" data-o="' + o + '" class="' + (op === o ? "an" : "") + '" aria-pressed="' + (op === o) + '">' + o + "</button>").join("") + "</div>";
