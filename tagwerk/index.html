@@ -921,7 +921,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const grenze = Date.now() - 24 * 3600e3, frisch = mails.filter(m => Date.parse(m.zeit) >= grenze), aelter = mails.filter(m => !(Date.parse(m.zeit) >= grenze));
     const knoepfe = m => m.quelle === "Gmail" ? ["todo", "ausblenden"] : ["todo", "archiv", "loeschen"];
     const zeile = m => {
-      const l = lokal[m.id], meta = l && l.was === "todo" ? "Kommt auf die To-do-Liste …" : [m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), m.quelle === "Gmail" ? "Gmail" : ""].filter(Boolean).join(" · ");
+      // Seit 24.11.2026: bei Gmail steht dabei, an welche Adresse die Mail ging (weitergeleitete alte Konten)
+      const anKurz = { "gregorwieser5@gmail.com": "Gmail", "wieser.gregor5103@gmail.com": "an 5103", "wieser.gregor.paypal@gmail.com": "an PayPal-Gmail", "gregor.wieser@munich-business-school.de": "an MBS" }[String(m.an || "").toLowerCase()] || (m.quelle === "Gmail" ? "Gmail" : "");
+      const l = lokal[m.id], meta = l && l.was === "todo" ? "Kommt auf die To-do-Liste …" : [m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), anKurz].filter(Boolean).join(" · ");
       const gruppe = seite => '<div class="post-aktionen ' + seite + '">' + knoepfe(m).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>";
       return '<div class="post-wisch" data-id="' + esc(m.id) + '">' + gruppe("links") + gruppe("rechts") +
         '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
