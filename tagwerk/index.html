@@ -214,10 +214,13 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 /* Aufklappen (seit 24.11.2026): Tippen auf den Player faehrt ihn nach oben aus, darin die Stimmen */
 .mini-karte { cursor: pointer; }
 /* Tippen außerhalb des aufgeklappten Players klappt ihn zu; die Fläche dahinter fängt den Tipp ab, damit darunter nichts ausgelöst wird */
-.mini-hinter { position: fixed; inset: 0; z-index: 11; background: rgba(6, 20, 34, .28); opacity: 0; pointer-events: none; transition: opacity .28s ease; -webkit-tap-highlight-color: transparent; }
+.mini-hinter { position: fixed; inset: 0; z-index: 11; background: rgba(6, 20, 34, .28); opacity: 0; pointer-events: none; transition: opacity .14s ease-out; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 html.mini-offen .mini-hinter { opacity: 1; pointer-events: auto; }
+html.mini-fang .mini-hinter { pointer-events: auto; }
+.mini { touch-action: manipulation; }
 .mini-griff { position: absolute; top: 4px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, .35); }
-.mini-mehr { display: grid; grid-template-rows: 0fr; margin-top: -6px; transition: grid-template-rows .28s ease, margin-top .28s ease; }
+.mini-mehr { display: grid; grid-template-rows: 0fr; margin-top: -6px; transition: grid-template-rows .14s ease-out, margin-top .14s ease-out; }
+.mini.offen .mini-mehr { transition-duration: .2s; }
 .mini-mehr > div { overflow: hidden; min-height: 0; }
 .mini.offen .mini-mehr { grid-template-rows: 1fr; margin-top: 0; }
 .mini-label { margin: 6px 0 6px; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9FC3DA; }
@@ -1014,9 +1017,19 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   }
   // Tippen irgendwo auf den Player (außer auf Knöpfe) klappt ihn auf und wieder zu
   $("mini-karte").addEventListener("click", e => { if (e.target.closest("button, .mini-mehr")) return; miniOffen(!$("mini").classList.contains("offen")); });
-  $("mini-hinter").addEventListener("click", () => miniOffen(false));
+  // Schon beim Berühren zuklappen, nicht erst beim Loslassen (Gregor 24.11.: fühlte sich verzögert an). Die Fläche fängt danach
+  // noch kurz den Klick ab, der beim Loslassen kommt, damit darunter nichts ausgelöst wird.
+  let fangUhr = 0;
+  const aussenZu = () => {
+    if (!$("mini").classList.contains("offen")) return;
+    miniOffen(false);
+    document.documentElement.classList.add("mini-fang");
+    clearTimeout(fangUhr); fangUhr = setTimeout(() => document.documentElement.classList.remove("mini-fang"), 450);
+  };
+  $("mini-hinter").addEventListener("pointerdown", aussenZu);
+  $("mini-hinter").addEventListener("click", () => { miniOffen(false); clearTimeout(fangUhr); document.documentElement.classList.remove("mini-fang"); });
   // Rand neben der Karte gehört zum Player-Element, zählt aber als außerhalb
-  $("mini").addEventListener("click", e => { if (e.target === $("mini")) miniOffen(false); });
+  $("mini").addEventListener("pointerdown", e => { if (e.target === $("mini")) aussenZu(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && $("mini").classList.contains("offen")) miniOffen(false); });
   $("mini-auf").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); miniOffen(!$("mini").classList.contains("offen")); } });
   function gesamtAudio(alle) {
