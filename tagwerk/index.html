@@ -216,7 +216,7 @@ html.laptop .mini { bottom: 14px; }
 .zt .fussleiste { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
 .anhoeren { justify-self: start; min-height: 36px; margin: -2px 0 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--hl); font: inherit; font-size: .88rem; font-weight: 600; padding: 0 12px; cursor: pointer; }
 .zt article.liest .anhoeren { background: var(--petrol); border-color: var(--petrol); color: #fff; }
-#z-tempo { width: auto; min-height: 44px; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--ink); font-weight: 600; padding: 0 10px; }
+#z-tempo, #z-stimme { width: auto; min-height: 44px; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--ink); font-weight: 600; padding: 0 10px; }
 /* Einklappen (seit 15.11.2026): zu zeigt Überschrift und Anriss, auf den ganzen Bericht */
 .zt article .kopfzeile { all: unset; display: block; box-sizing: border-box; width: 100%; cursor: pointer; padding-right: 30px; position: relative; -webkit-tap-highlight-color: transparent; }
 .zt article .kopfzeile::after { content: "+"; position: absolute; right: 2px; top: -2px; color: var(--muted); font-weight: 400; font-size: 1.5rem; line-height: 1; }
@@ -394,7 +394,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     <h1 id="h-zeitung">Morgenzeitung</h1>
     <p class="wetter" id="z-wetter"></p>
   </header>
-  <div class="vorlesen" id="z-vorlesen"><button class="knopf" type="button" id="z-alle">Alles anhören</button><select id="z-tempo" aria-label="Lesetempo"><option value="0.8">0,8×</option><option value="1">1×</option><option value="1.1">1,1×</option><option value="1.3">1,3×</option><option value="1.5">1,5×</option><option value="2">2×</option><option value="2.5">2,5×</option></select><button class="knopf leise" type="button" id="z-klapp">Alle aufklappen</button></div>
+  <div class="vorlesen" id="z-vorlesen"><button class="knopf" type="button" id="z-alle">Alles anhören</button><select id="z-tempo" aria-label="Lesetempo"><option value="0.8">0,8×</option><option value="1">1×</option><option value="1.1">1,1×</option><option value="1.3">1,3×</option><option value="1.5">1,5×</option><option value="2">2×</option><option value="2.5">2,5×</option></select><select id="z-stimme" aria-label="Stimme" hidden></select><button class="knopf leise" type="button" id="z-klapp">Alle aufklappen</button></div>
   <section class="persoenlich" id="z-privat" aria-labelledby="z-privat-titel" hidden></section>
   <div class="block" id="z-inhalt"></div>
   <section class="themen" aria-labelledby="z-themen-titel"><h2 id="z-themen-titel">Deine Themen</h2><p id="z-themen">Ab der nächsten Ausgabe wählt die Zeitung danach aus.</p><a class="knopf" href="https://claude.ai/artifact/1PMUZJR3g2pwVdPXft5oce" target="_blank" rel="noopener">Themen bewerten, 1 bis 10</a></section>
@@ -455,7 +455,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   let posWieder = false;
   const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
-  let zeitung = null, privat = null, geladenUm = 0;
+  let zeitung = null, privat = null, geladenUm = 0, zeitungIstHeute = true;
 
   // ---------- Schlüssel über die Adresse (?k=), seit 15.11.2026 ----------
   // Am iPhone hat jede Homescreen-App ihren eigenen Speicher. Steht der Schlüssel in der Adresse, nimmt "Zum Home-Bildschirm"
@@ -831,7 +831,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     try {
       const r = await fetch("zeitung/" + (datei || "heute.json"), { cache: "no-cache" });
       if (!r.ok) throw new Error(r.status);
-      zeitung = await r.json(); if (!datei) geladenUm = Date.now();
+      zeitung = await r.json(); zeitungIstHeute = !datei; if (!datei) geladenUm = Date.now();
     } catch (e) {
       if (!zeitung) { $("k-termine").innerHTML = '<p class="zeile">Keine Verbindung. Termine und To-dos laden, sobald du wieder online bist.</p>'; $("z-inhalt").innerHTML = "<p>Keine Verbindung.</p>"; }
       return;
@@ -848,6 +848,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   }
   function zeichneZeitung() {
     const z = zeitung;
+    stimmAuswahl();
     $("z-eyebrow").textContent = "Ausgabe " + z.ausgabe + " · " + (z.titel || z.datum.split("-").reverse().join("."));
     $("z-wetter").innerHTML = (z.wetter ? "<span>" + esc(z.wetter) + "</span>" : "") + (z.sonne ? "<span>" + esc(z.sonne) + "</span>" : "");
     const w = privat && privat.warum || {};
@@ -942,7 +943,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   const TTS = window.speechSynthesis || null, spieler = new Audio();
   spieler.preload = "auto";
   let lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: 0, g: null };
-  let gesamtSrc = "", sucheBei = null;
+  let gesamtSrc = "", sucheBei = null, zeitungNeu = false;
   // Neue App-Version, während vorgelesen wird: erst laden, wenn nichts mehr läuft (sonst bricht das Audio ab)
   let neuWartet = false, neuGeladen = false;
   function neuWennFrei() { if (neuWartet && !lesen.an && !neuGeladen) { neuGeladen = true; location.reload(); } }
@@ -962,11 +963,24 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     }));
     return out;
   }
+  // Stimmenauswahl (seit 24.11.2026): heute.json bringt audioStimmen {id: {titel, url, kapitel}}, Hauptstimme zuerst.
+  // Die Wahl bleibt gespeichert; fehlt die gewählte Stimme in einer Ausgabe, spielt die Hauptstimme (audioGesamt).
+  let stimmWahl = lsGet("wv-stimme") || "";
+  const passt = (g, n) => !!(g && g.url && Array.isArray(g.kapitel) && g.kapitel.length === n);
+  function stimmAuswahl() {
+    const s = zeitung && zeitung.audioStimmen, ids = s && typeof s === "object" ? Object.keys(s) : [], sel = $("z-stimme");
+    sel.hidden = ids.length < 2;
+    sel.innerHTML = ids.map(id => '<option value="' + esc(id) + '">' + esc(s[id].titel || id) + "</option>").join("");
+    if (ids.length) sel.value = ids.includes(stimmWahl) ? stimmWahl : ids[0];
+  }
   function gesamtAudio(alle) {
-    const g = zeitung && zeitung.audioGesamt;
-    if (!g || !g.url || !Array.isArray(g.kapitel) || g.kapitel.length !== alle.length) return null;
+    const s = zeitung && zeitung.audioStimmen, w = s && s[stimmWahl];
+    const g = passt(w, alle.length) ? w : zeitung && zeitung.audioGesamt;
+    if (!passt(g, alle.length)) return null;
     return { url: g.url, kapitel: g.kapitel.map(Number), ausgabe: zeitung.ausgabe };
   }
+  // Hat die Ausgabe schon die echte Stimme für diese Meldung? (Gesamtdatei oder Einzeldatei mit gleichem Titel)
+  const audioDa = (z, a) => !!(z && (z.audioGesamt || (z.ressorts || []).some(r => (r.meldungen || []).some(m => m.audio && m.titel === a.titel))));
   function markiereArtikel(id) {
     document.querySelectorAll("#z-inhalt article").forEach(a => {
       const an = !!id && a.dataset.id === id, k = a.querySelector(".anhoeren");
@@ -991,12 +1005,14 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: lesen.lauf + 1, g: null };
     markiereArtikel(null); leseLeiste(); miniZeigen(false);
     if ("mediaSession" in navigator) try { navigator.mediaSession.metadata = null; } catch (e) {}
+    // Während des Vorlesens kam eine neuere Fassung (etwa mit Stimme): jetzt nachladen
+    if (zeitungNeu && zeitungIstHeute) { zeitungNeu = false; ladeZeitung(); }
     if (document.hidden) neuWennFrei();
   }
   function miniZeigen(an) { $("mini").classList.toggle("an", an); $("mini").setAttribute("aria-hidden", String(!an)); document.documentElement.classList.toggle("mit-mini", an); if (!an) { $("mini-fort").style.width = "0"; $("mini-zeit").textContent = ""; } }
   function vorlesen(abId) {
     if (!zeitung) return;
-    anhalten();
+    anhalten(); warteSeit = 0;
     const alle = artikelTexte(); let ab = abId ? alle.findIndex(a => a.id === abId) : 0; if (ab < 0) ab = 0;
     if (!alle.length) return;
     const g = gesamtAudio(alle);
@@ -1018,8 +1034,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (lesen.g) { spieleGesamt(lauf); return; }
     let fertig = false;
     const weiter = () => { if (fertig || lesen.lauf !== lauf) return; fertig = true; lesen.pos++; spiele(lauf); };
-    // Im Hintergrund schweigt die Systemstimme am iPhone: dann lieber gleich die nächste Meldung
-    const ohneAudio = () => { if (document.hidden) weiter(); else sprich(a, weiter); };
+    // Im Hintergrund schweigt die Systemstimme am iPhone: dann lieber gleich die nächste Meldung.
+    // Aktuelle Ausgabe ohne Audio: der Server rechnet die Stimme noch, also warten statt Systemstimme (seit 24.11.2026)
+    const ohneAudio = () => { if (zeitungIstHeute && (!warteSeit || Date.now() - warteSeit < 10 * 60000)) warteAufStimme(a, lauf, weiter); else if (document.hidden) weiter(); else sprich(a, weiter); };
     const ersatz = () => { if (fertig || lesen.lauf !== lauf) return; spieler.onended = spieler.onerror = null; ohneAudio(); };
     if (a.audio) {
       lesen.modus = "audio";
@@ -1046,6 +1063,32 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo;
     const p = spieler.play();
     if (p && p.catch) p.catch(e => { if (e && e.name === "AbortError") return; lesen.pause = true; leseLeiste(); });
+  }
+  // Seit 24.11.2026: Die Zeitung erscheint ein paar Minuten vor ihrer Stimme (der Server rechnet danach). Früher sprang die App dann auf die
+  // Systemstimme des iPhones (Roboterstimme, Gregor 24.11.). Jetzt alle 20 Sekunden nachsehen und mit der echten Stimme an derselben
+  // Meldung beginnen. Erst nach 10 Minuten ohne Audio (Server kaputt) die Systemstimme als letzter Ausweg.
+  let warteSeit = 0;
+  function warteAufStimme(a, lauf, weiter) {
+    if (!warteSeit) warteSeit = Date.now();
+    lesen.modus = "warten";
+    $("mini-ressort").textContent = "Die Stimme wird gerade erzeugt, gleich geht es los";
+    setTimeout(async () => {
+      if (lesen.lauf !== lauf || !lesen.an) return;
+      try {
+        const r = await fetch("zeitung/heute.json", { cache: "no-cache" }), neu = r.ok ? await r.json() : null;
+        if (neu && audioDa(neu, a)) {
+          await ladeZeitung();
+          if (lesen.lauf !== lauf || !lesen.an) return;
+          warteSeit = 0;
+          const id = (artikelTexte().find(x => x.titel === a.titel) || a).id;
+          vorlesen(id);
+          return;
+        }
+      } catch (e) {}
+      if (lesen.lauf !== lauf || !lesen.an) return;
+      if (Date.now() - warteSeit < 10 * 60000) warteAufStimme(a, lauf, weiter);
+      else if (document.hidden) weiter(); else sprich(a, weiter);
+    }, 20000);
   }
   function sprich(a, weiter) {
     if (!TTS) { weiter(); return; }
@@ -1143,6 +1186,11 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("mini-zurueck").onclick = () => sprung(-10);
   $("mini-vor").onclick = () => sprung(10);
   $("mini-zu").onclick = stopp;
+  // Andere Stimme: läuft gerade etwas, an derselben Meldung in der neuen Stimme neu beginnen
+  $("z-stimme").onchange = () => {
+    stimmWahl = $("z-stimme").value; lsSet("wv-stimme", stimmWahl);
+    if (lesen.an) { const a = lesen.liste[lesen.pos]; vorlesen(a ? a.id : undefined); }
+  };
   $("z-tempo").onchange = () => {
     tempo = Number($("z-tempo").value) || 1; lsSet("wv-tempo", String(tempo)); leseLeiste();
     if (!lesen.an) return;
@@ -1275,6 +1323,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   // jeder Änderung hoch. Die App holt heute.json beim Zurückkommen (ab 1 Minute) und alle 2 Minuten, solange die Startseite offen ist,
   // und tauscht nur den persönlichen Teil aus, damit Zeitung und Vorlesen nicht neu gezeichnet werden. Neue Ausgabe: ganz neu laden.
   let frischUm = Date.now(), frischLaeuft = false;
+  const kern = z => JSON.stringify([z.ressorts, z.audioGesamt || null, z.audioStimmen || null]);
   async function frischHeute() {
     if (frischLaeuft || !zeitung || document.hidden || $("z-archiv").selectedIndex > 0) return;
     frischLaeuft = true; frischUm = Date.now();
@@ -1282,14 +1331,16 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       const r = await fetch("zeitung/heute.json", { cache: "no-cache" });
       if (!r.ok) return;
       const neu = await r.json();
-      if (neu.ausgabe !== zeitung.ausgabe) { if (!lesen.an) await ladeZeitung(); return; }
+      // Neue Ausgabe ODER dieselbe Ausgabe mit geändertem Text oder Audio: ganz neu laden (seit 24.11.2026). Vorher wurde bei gleicher
+      // Ausgabe nur der persönliche Teil getauscht, die App blieb so auf der Fassung ohne Stimme hängen und las mit der Systemstimme.
+      if (neu.ausgabe !== zeitung.ausgabe || kern(neu) !== kern(zeitung)) { if (!lesen.an) await ladeZeitung(); else zeitungNeu = true; return; }
       if (JSON.stringify(neu.privat) === JSON.stringify(zeitung.privat)) return;
       zeitung.privat = neu.privat; zeitung.abgeglichen = neu.abgeglichen; geladenUm = Date.now();
       if (await entsperren() && !$("v-heute").hidden) zeichneHeute();
     } catch (e) {} finally { frischLaeuft = false; }
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - frischUm > 60000 && Date.now() - geladenUm <= 15 * 60000) frischHeute(); });
-  setInterval(() => { if (!$("v-heute").hidden) frischHeute(); }, 120000);
+  setInterval(() => { if (!$("v-heute").hidden || !$("v-zeitung").hidden) frischHeute(); }, 120000);
   zeige();
   ladeZeitung();
   // Lernen und Essen im Hintergrund vorladen, damit die Zahlen auf der Startseite frisch sind und der Wechsel sofort geht
