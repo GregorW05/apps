@@ -1193,6 +1193,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     await entsperren();
     zeichneZeitung(); zeichneZeitungKarte(); sendeHaken();
     if (lesen.an && lesen.liste[lesen.pos]) markiereArtikel(lesen.liste[lesen.pos].id); // nach dem Neuzeichnen die laufende Meldung wieder markieren
+    if (!datei) wiederherstellen(); // pausierte Wiedergabe von vorher (seit 24.11.2026 abends)
     if (!datei) abgleichPruefen();
     if (!posWieder) { posWieder = true; const p = sitz.get("wv-pos"); if (p && p.v === (location.hash.slice(1) || "heute") && p.y > 0) requestAnimationFrame(() => window.scrollTo(0, p.y)); }
     if (!datei) {
@@ -1455,7 +1456,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     anhalten();
     // Quelle leeren, damit die Anzeige auf dem Sperrbildschirm verschwindet und nichts Altes mehr startet
     if (spieler.getAttribute("src")) { spieler.removeAttribute("src"); try { spieler.load(); } catch (e) {} }
-    gesamtSrc = ""; sucheBei = null;
+    gesamtSrc = ""; sucheBei = null; letzteZeit = 0; lsSet(WIEDER, "null");
     lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: lesen.lauf + 1, g: null };
     markiereArtikel(null); leseLeiste(); miniZeigen(false);
     if ("mediaSession" in navigator) try { navigator.mediaSession.metadata = null; } catch (e) {}
@@ -1503,20 +1504,70 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   function spieleGesamt(lauf) {
     const g = lesen.g, start = g.kapitel[lesen.pos] || 0;
     lesen.modus = "gesamt";
-    spieler.onended = () => { if (lesen.lauf === lauf) stopp(); };
-    // Gesamtdatei lädt nicht: zurück auf eine Datei je Meldung, ab der Meldung, die gerade dran ist
-    spieler.onerror = () => {
-      if (lesen.lauf !== lauf || !lesen.g) return;
-      spieler.onended = spieler.onerror = null; gesamtSrc = ""; sucheBei = null;
-      lesen.liste = lesen.liste.slice(lesen.pos); lesen.pos = 0; lesen.g = null; lesen.lauf++; spiele(lesen.lauf);
-    };
-    if (gesamtSrc !== g.url) {
-      gesamtSrc = g.url; sucheBei = start > 0 ? start : null;
-      spieler.src = g.url + (start > 0 ? "#t=" + start.toFixed(2) : "");
-    } else if (Math.abs(spieler.currentTime - start) > 0.3) spieler.currentTime = start;
+    gesamtHandler(lauf);
+    if (gesamtSrc !== g.url) quelleLaden(start);
+    else if (Math.abs(spieler.currentTime - start) > 0.3) spieler.currentTime = start;
+    letzteZeit = start;
     spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo;
     const p = spieler.play();
     if (p && p.catch) p.catch(e => { if (e && e.name === "AbortError") return; lesen.pause = true; leseLeiste(); });
+  }
+  // ---------- Weiterspielen nach Pause und Sperren (seit 24.11.2026 abends, Gregor: nach Pause, Sperren und Weiter auf dem
+  // Sperrbildschirm brach die Wiedergabe ab) ----------
+  // 1. Die App merkt sich Datei, Meldung und Sekunde (wv-wiedergabe). Lädt sie neu (iOS beendet Home-Bildschirm-Apps im Hintergrund,
+  //    neue Version), steht der Player pausiert an derselben Stelle und Weiter spielt von dort.
+  // 2. Nach langem Sperren hat das iPhone die Verbindung zur Datei oft verworfen. Weiter lädt dann dieselbe Datei an der gemerkten
+  //    Stelle neu, statt wie früher sofort auf Einzeldateien auszuweichen (das lief im Hintergrund bis zum Stopp durch).
+  // 3. Ein Ende mitten in der Datei ist ein Fehler, kein Ende: neu laden statt stoppen.
+  const WIEDER = "wv-wiedergabe";
+  let letzteZeit = 0, sicherUm = 0, fehlerN = 0, fehlerUm = 0, wiederVersucht = false;
+  function quelleLaden(t) {
+    const g = lesen.g; if (!g) return;
+    gesamtSrc = g.url; sucheBei = t > 0.5 ? t : null;
+    spieler.src = g.url + (t > 0.5 ? "#t=" + t.toFixed(2) : "");
+    spieler.defaultPlaybackRate = tempo; spieler.playbackRate = tempo;
+  }
+  function gesamtHandler(lauf) {
+    spieler.onended = () => {
+      if (lesen.lauf !== lauf) return;
+      const d = spieler.duration;
+      // Echtes Ende nur, wenn die Länge bekannt ist und die Stelle am Schluss liegt; sonst hat das iPhone die Datei verworfen
+      if (!(d && isFinite(d)) || Math.max(spieler.currentTime, letzteZeit) < d - 3) { neuLaden(lauf, !lesen.pause); return; }
+      stopp();
+    };
+    spieler.onerror = () => {
+      if (lesen.lauf !== lauf || !lesen.g) return;
+      if (Date.now() - fehlerUm > 90000) fehlerN = 0;
+      fehlerUm = Date.now(); fehlerN++;
+      // Erst zweimal dieselbe Datei an der gemerkten Stelle neu laden (pausiert bleibt pausiert)
+      if (fehlerN <= 2) { neuLaden(lauf, !lesen.pause); return; }
+      // Lädt sie wirklich nicht: Einzeldateien ab der Meldung, die gerade dran ist (alter Weg)
+      spieler.onended = spieler.onerror = null; gesamtSrc = ""; sucheBei = null;
+      lesen.liste = lesen.liste.slice(lesen.pos); lesen.pos = 0; lesen.g = null; lesen.lauf++; spiele(lesen.lauf);
+    };
+  }
+  function neuLaden(lauf, spielen) {
+    if (lesen.lauf !== lauf || !lesen.g) return;
+    quelleLaden(letzteZeit);
+    if (spielen) { const p = spieler.play(); if (p && p.catch) p.catch(e => { if (e && e.name !== "AbortError") { lesen.pause = true; leseLeiste(); } }); }
+  }
+  function sichern(sofort) {
+    if (!lesen.an || lesen.modus !== "gesamt" || !lesen.g) return;
+    if (!sofort && Date.now() - sicherUm < 4000) return;
+    sicherUm = Date.now();
+    lsSet(WIEDER, JSON.stringify({ ausgabe: lesen.g.ausgabe, url: lesen.g.url, kapitel: lesen.g.kapitel, pos: lesen.pos, zeit: letzteZeit, ts: Date.now() }));
+  }
+  function wiederherstellen() {
+    if (wiederVersucht || lesen.an || !zeitung || !zeitungIstHeute) return;
+    wiederVersucht = true;
+    const w = lies(WIEDER);
+    if (!w || !w.url || Date.now() - (w.ts || 0) > 12 * 3600e3 || w.ausgabe !== zeitung.ausgabe) return;
+    const alle = artikelTexte();
+    if (!Array.isArray(w.kapitel) || w.kapitel.length !== alle.length) return;
+    lesen = { an: true, pause: true, liste: alle, pos: Math.max(0, Math.min(w.pos || 0, alle.length - 1)), modus: "gesamt", lauf: lesen.lauf + 1, g: { url: w.url, kapitel: w.kapitel.map(Number), ausgabe: w.ausgabe } };
+    letzteZeit = Number(w.zeit) || lesen.g.kapitel[lesen.pos] || 0;
+    gesamtHandler(lesen.lauf); quelleLaden(letzteZeit);
+    miniZeigen(true); zeigeMeldung(lesen.liste[lesen.pos]); leseLeiste();
   }
   // Seit 24.11.2026: Die Zeitung erscheint ein paar Minuten vor ihrer Stimme (der Server rechnet danach). Früher sprang die App dann auf die
   // Systemstimme des iPhones (Roboterstimme, Gregor 24.11.). Jetzt alle 20 Sekunden nachsehen und mit der echten Stimme an derselben
@@ -1562,8 +1613,19 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (istAudio()) {
       if (lesen.modus === "audio" && spieler.ended) { springe(1); return; }
       lesen.pause = false; leseLeiste();
+      const gesamt = lesen.modus === "gesamt" && lesen.g;
+      // Hat das iPhone die Datei verworfen (Fehler, keine Daten, keine Quelle), dieselbe Datei an der gemerkten Stelle neu laden
+      if (gesamt && (spieler.error || spieler.readyState === 0 || !spieler.currentSrc || spieler.networkState === 3)) { gesamtHandler(lesen.lauf); quelleLaden(letzteZeit); }
       const p = spieler.play();
-      if (p && p.catch) p.catch(e => { if (e && e.name !== "AbortError") { lesen.pause = true; leseLeiste(); } });
+      if (p && p.catch) p.catch(e => {
+        if (e && e.name === "AbortError") return;
+        if (gesamt && e && e.name !== "NotAllowedError") {
+          quelleLaden(letzteZeit);
+          const p2 = spieler.play(); if (p2 && p2.catch) p2.catch(() => { lesen.pause = true; leseLeiste(); });
+          return;
+        }
+        lesen.pause = true; leseLeiste();
+      });
     } else if (TTS) { TTS.resume(); lesen.pause = false; leseLeiste(); }
   }
   function pausieren() {
@@ -1600,7 +1662,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     h("stop", stopp);
   }
   // Pause und Weiter über Kopfhörer oder Sperrbildschirm sollen die Knöpfe in der App mitnehmen
-  spieler.addEventListener("pause", () => { if (Date.now() < stillBis) return; if (lesen.an && istAudio() && !lesen.pause && !spieler.ended && spieler.src) { lesen.pause = true; leseLeiste(); } });
+  spieler.addEventListener("pause", () => { sichern(true); if (Date.now() < stillBis) return; if (lesen.an && istAudio() && !lesen.pause && !spieler.ended && spieler.src) { lesen.pause = true; leseLeiste(); } });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) sichern(true); });
   spieler.addEventListener("play", () => { if (lesen.an && lesen.pause) { lesen.pause = false; leseLeiste(); } });
   $("z-alle").onclick = () => vorlesen();
   function sprung(sek) {
@@ -1613,6 +1676,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   const mmss = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); };
   function position() {
     if (!istAudio()) return;
+    // Gemerkte Stelle für das Weiterspielen (nicht während eines Sprungs oder Neuladens, dann steht die Zeit kurz auf 0)
+    if (lesen.modus === "gesamt" && sucheBei === null && !spieler.seeking && spieler.currentTime > 0) { letzteZeit = spieler.currentTime; sichern(false); }
     let d = spieler.duration, t = spieler.currentTime;
     if (!d || !isFinite(d)) return;
     if (lesen.modus === "gesamt" && lesen.g) {
