@@ -155,6 +155,14 @@ details.rec summary::-webkit-details-marker { display: none; }
 details.rec summary b { font-weight: 600; margin-right: auto; }
 details.rec summary .thumb { width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex: none; }
 .recbody .hero { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; border-radius: 14px; }
+/* Echte Fotos mit langsamem, nahtlosem Zoom und Schwenk (seit 24.11.2026, Gregors Wunsch: realistisch statt Zeichnung, wie ein kleiner Loop) */
+.recbody .hero-fig { margin: 0; }
+.recbody .hero-rahmen { overflow: hidden; border-radius: 14px; aspect-ratio: 8 / 5; }
+.recbody .hero-rahmen .hero { height: 100%; border-radius: 0; object-fit: cover; transform-origin: 58% 46%; animation: hero-loop 18s ease-in-out infinite alternate; will-change: transform; }
+@keyframes hero-loop { from { transform: scale(1.03) translate(0, 0); } to { transform: scale(1.13) translate(-2.2%, -1.6%); } }
+@media (prefers-reduced-motion: reduce) { .recbody .hero-rahmen .hero { animation: none; } }
+.recbody .hero-fig figcaption { margin-top: 4px; font-size: .68rem; line-height: 1.3; color: var(--muted); }
+.recbody .hero-fig figcaption a { color: inherit; }
 details.rec summary span { color: var(--muted); font-size: 0.84rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 details.rec summary::after { content: "+"; color: var(--accent); font-weight: 700; margin-left: 4px; }
 details.rec[open] summary::after { content: "−"; }
@@ -279,8 +287,20 @@ html.eingebettet[data-theme="dark"] { --bg: #071827; --surface: #0E2336; --ink: 
   /* BILDER-ENDE */
   const IMG_URL = {};
   for (const k in IMGS) IMG_URL[k] = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(IMGS[k]);
+// Echte Fotos statt der Zeichnungen (seit 24.11.2026, Gregors Wunsch), frei lizenziert von Wikimedia Commons, auf 8:5 zugeschnitten.
+// Die Zeichnungen oben bleiben als Rückfall, falls ein Foto fehlt. Quelle und Lizenz stehen klein unter dem großen Bild (Pflicht bei CC BY-SA).
+const FOTOS = {
+  chili: { a: "cyclonebill from Copenhagen, Denmark", l: "CC BY-SA 2.0", lu: "https://creativecommons.org/licenses/by-sa/2.0", s: "https://commons.wikimedia.org/wiki/File:Chili_con_carne_(4431800858).jpg" },
+  curry: { a: "pelican from Tokyo, Japan", l: "CC BY-SA 2.0", lu: "https://creativecommons.org/licenses/by-sa/2.0", s: "https://commons.wikimedia.org/wiki/File:Chicken_spinach_curry_(424955518).jpg" },
+  gulasch: { a: "Mom the Barbarian", l: "CC BY-SA 2.0", lu: "https://creativecommons.org/licenses/by-sa/2.0", s: "https://commons.wikimedia.org/wiki/File:Chicken_Paprikas.jpg" },
+  bolo: { a: "HaJunkiyada", l: "CC BY-SA 4.0", lu: "https://creativecommons.org/licenses/by-sa/4.0", s: "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Spaghetti_bolognese_with_peas.jpg" },
+  oats: { a: "Papathanasiouk", l: "CC BY-SA 3.0", lu: "https://creativecommons.org/licenses/by-sa/3.0", s: "https://commons.wikimedia.org/wiki/File:Home_prepared_yoghurt_and_muesli_with_berries.JPG" },
+  snack: { a: "HaJunkiyada", l: "CC BY-SA 4.0", lu: "https://creativecommons.org/licenses/by-sa/4.0", s: "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Healthy_snack_plate_with_fruit_and_nuts.jpg" }
+};
+for (const k in FOTOS) IMG_URL[k] = "bilder/" + k + ".jpg";
   const thumb = k => IMG_URL[k] ? '<img class="thumb" src="' + IMG_URL[k] + '" alt="">' : "";
-  const hero = (k, name) => IMG_URL[k] ? '<img class="hero" src="' + IMG_URL[k] + '" alt="' + esc("So sieht " + name + " fertig aus") + '">' : "";
+  const hero = (k, name) => !IMG_URL[k] ? "" : !FOTOS[k] ? '<img class="hero" src="' + IMG_URL[k] + '" alt="' + esc("So sieht " + name + " fertig aus") + '">' :
+  '<figure class="hero-fig"><div class="hero-rahmen"><img class="hero" src="' + IMG_URL[k] + '" alt="' + esc("So sieht " + name + " aus") + '" loading="lazy"></div><figcaption>Foto: ' + esc(FOTOS[k].a) + ', <a href="' + esc(FOTOS[k].lu) + '" target="_blank" rel="noopener">' + esc(FOTOS[k].l) + '</a>, <a href="' + esc(FOTOS[k].s) + '" target="_blank" rel="noopener">Wikimedia Commons</a>, zugeschnitten</figcaption></figure>';
 
   // Hauptgerichte, Mengen für 4 Portionen (= eine Kochrunde aus ganzen Spar-Packungen); sp = Gewürze [Name, Menge für 4, Einheit]
   // Nährwerte je Portion nachgerechnet am 14.11.2026, Richtwerte.
