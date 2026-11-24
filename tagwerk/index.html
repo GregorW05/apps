@@ -1419,11 +1419,46 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
         return '<button type="button" class="mini-stimme" role="radio" data-id="' + esc(id) + '" aria-checked="' + (id === aktiv) + '">' + esc(m ? m[1] : t) + (m ? "<span>" + esc(m[2]) + "</span>" : "") + "</button>"; }).join("");
     $("mini-stimmen").querySelectorAll(".mini-stimme").forEach(b => b.onclick = () => waehleStimme(b.dataset.id));
   }
-  // Andere Stimme: läuft gerade etwas, an derselben Meldung in der neuen Stimme neu beginnen
+  // Andere Stimme (seit 24.11.2026 abends, Gregor: der Wechsel fing die Meldung von vorne an): an derselben Stelle weiterlesen.
+  // Die Stimmen sprechen verschieden schnell, deshalb wird die Stelle über die Meldung (Kapitel) und den Anteil darin umgerechnet,
+  // dann 1,5 Sekunden zurück, damit kein Wort fehlt. Lief es, läuft es weiter; war Pause, steht die neue Stimme pausiert dort.
+  // Nur bei der Gesamtdatei; Einzeldateien und Systemstimme beginnen wie früher am Anfang der Meldung.
+  const spielZeit = () => sucheBei !== null ? sucheBei : (spieler.currentTime > 0.5 ? spieler.currentTime : letzteZeit);
+  function stelleUmrechnen(alt, neu) {
+    const k0 = alt.kapitel, k1 = neu.kapitel, t = alt.t;
+    let i = 0; while (i + 1 < k0.length && k0[i + 1] <= t + 0.05) i++;
+    const s0 = k0[i] || 0, e0 = i + 1 < k0.length ? k0[i + 1] : alt.dauer;
+    const s1 = k1[i] || 0, e1 = i + 1 < k1.length ? k1[i + 1] : neu.dauer;
+    let z;
+    if (e0 > s0 && e1 > s1) z = s1 + Math.max(0, Math.min(1, (t - s0) / (e0 - s0))) * (e1 - s1);
+    else { const r = k0[k0.length - 1] > 0 && k1[k1.length - 1] > 0 ? k1[k1.length - 1] / k0[k0.length - 1] : 1; z = s1 + Math.max(0, t - s0) * r; }
+    return { pos: i, zeit: Math.max(s1, z - 1.5) };
+  }
+  function stimmeAnStelle(g, alt) {
+    const ziel = stelleUmrechnen(alt, g), pause = alt.pause;
+    anhalten();
+    lesen.g = g; lesen.modus = "gesamt"; lesen.pos = ziel.pos; lesen.pause = pause; lesen.lauf++;
+    gesamtHandler(lesen.lauf);
+    letzteZeit = ziel.zeit; quelleLaden(ziel.zeit);
+    zeigeMeldung(lesen.liste[ziel.pos]); sichern(true);
+    if (!pause) {
+      $("mini-ressort").textContent = "Neue Stimme lädt …"; stimmLaedt = true;
+      const p = spieler.play();
+      if (p && p.catch) p.catch(e => { if (e && e.name === "AbortError") return; lesen.pause = true; leseLeiste(); });
+    }
+    leseLeiste();
+  }
   function waehleStimme(id) {
     if (!id || id === stimmAktiv) return;
+    const alt = lesen.an && lesen.modus === "gesamt" && lesen.g && lesen.g.ausgabe === (zeitung && zeitung.ausgabe)
+      ? { kapitel: lesen.g.kapitel, dauer: lesen.g.dauer || (isFinite(spieler.duration) ? spieler.duration : 0), t: spielZeit(), pause: lesen.pause || spieler.paused, url: lesen.g.url } : null;
     stimmWahl = stimmAktiv = id; lsSet("wv-stimme", id);
     $("mini-stimmen").querySelectorAll(".mini-stimme").forEach(b => b.setAttribute("aria-checked", String(b.dataset.id === id)));
+    if (alt) {
+      const g = gesamtAudio(lesen.liste);
+      if (g && g.url === alt.url) return; // dieselbe Datei (gewählte Stimme fehlt in dieser Ausgabe): einfach weiterlaufen lassen
+      if (g) { stimmeAnStelle(g, alt); return; }
+    }
     if (lesen.an) {
       const a = lesen.liste[lesen.pos]; vorlesen(a ? a.id : undefined);
       // Sofort zeigen, dass gewechselt wird; die neue Datei braucht einen Moment, bis sie spielt
@@ -1520,7 +1555,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const s = zeitung && zeitung.audioStimmen, w = s && s[stimmWahl];
     const g = passt(w, alle.length) ? w : zeitung && zeitung.audioGesamt;
     if (!passt(g, alle.length)) return null;
-    return { url: g.url, kapitel: g.kapitel.map(Number), ausgabe: zeitung.ausgabe };
+    return { url: g.url, kapitel: g.kapitel.map(Number), ausgabe: zeitung.ausgabe, dauer: Number(g.dauer) || 0 };
   }
   // Hat die Ausgabe schon die echte Stimme für diese Meldung? (Gesamtdatei oder Einzeldatei mit gleichem Titel)
   const audioDa = (z, a) => !!(z && (z.audioGesamt || (z.ressorts || []).some(r => (r.meldungen || []).some(m => m.audio && m.titel === a.titel))));
@@ -1643,7 +1678,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (!lesen.an || lesen.modus !== "gesamt" || !lesen.g) return;
     if (!sofort && Date.now() - sicherUm < 4000) return;
     sicherUm = Date.now();
-    lsSet(WIEDER, JSON.stringify({ ausgabe: lesen.g.ausgabe, url: lesen.g.url, kapitel: lesen.g.kapitel, pos: lesen.pos, zeit: letzteZeit, ts: Date.now() }));
+    lsSet(WIEDER, JSON.stringify({ ausgabe: lesen.g.ausgabe, url: lesen.g.url, kapitel: lesen.g.kapitel, dauer: lesen.g.dauer || 0, pos: lesen.pos, zeit: letzteZeit, ts: Date.now() }));
   }
   function wiederherstellen() {
     if (wiederVersucht || lesen.an || !zeitung || !zeitungIstHeute) return;
@@ -1652,7 +1687,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (!w || !w.url || Date.now() - (w.ts || 0) > 12 * 3600e3 || w.ausgabe !== zeitung.ausgabe) return;
     const alle = artikelTexte();
     if (!Array.isArray(w.kapitel) || w.kapitel.length !== alle.length) return;
-    lesen = { an: true, pause: true, liste: alle, pos: Math.max(0, Math.min(w.pos || 0, alle.length - 1)), modus: "gesamt", lauf: lesen.lauf + 1, g: { url: w.url, kapitel: w.kapitel.map(Number), ausgabe: w.ausgabe } };
+    lesen = { an: true, pause: true, liste: alle, pos: Math.max(0, Math.min(w.pos || 0, alle.length - 1)), modus: "gesamt", lauf: lesen.lauf + 1, g: { url: w.url, kapitel: w.kapitel.map(Number), ausgabe: w.ausgabe, dauer: Number(w.dauer) || 0 } };
     letzteZeit = Number(w.zeit) || lesen.g.kapitel[lesen.pos] || 0;
     gesamtHandler(lesen.lauf); quelleLaden(letzteZeit);
     miniZeigen(true); zeigeMeldung(lesen.liste[lesen.pos]); leseLeiste();
