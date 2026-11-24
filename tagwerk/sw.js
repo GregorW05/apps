@@ -1,5 +1,5 @@
-const CACHE = "tagwerk-20261124-5";
-const START = ["./", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "favicon.svg", "raetsel.js", "zeitung/heute.json"];
+const CACHE = "tagwerk-20261124-6";
+const START = ["./", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "cover-512.png", "favicon.svg", "raetsel.js", "zeitung/heute.json"];
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(START))); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {

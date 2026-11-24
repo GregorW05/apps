@@ -1190,7 +1190,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   }
   function medienInfo(a) {
     if (!("mediaSession" in navigator) || !window.MediaMetadata) return;
-    try { navigator.mediaSession.metadata = new MediaMetadata({ title: a.titel, artist: a.ressort, album: "Wieser Ventures, Ausgabe " + (lesen.g ? lesen.g.ausgabe : zeitung.ausgabe), artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }] }); } catch (e) {}
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: a.titel, artist: a.ressort, album: "Wieser Ventures, Ausgabe " + (lesen.g ? lesen.g.ausgabe : zeitung.ausgabe), artwork: [{ src: "cover-512.png", sizes: "512x512", type: "image/png" }] }); } catch (e) {}
   }
   // Start der Meldung, die gerade läuft, in Sekunden der Gesamtdatei (sonst 0)
   const kapStart = () => lesen.modus === "gesamt" && lesen.g ? lesen.g.kapitel[lesen.pos] || 0 : 0;
