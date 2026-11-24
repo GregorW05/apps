@@ -130,6 +130,27 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .post-zeile[data-art="info"] .td-punkt::before { background: var(--muted); opacity: .6; }
 .post-zeile[data-art="erledigt"] .td-punkt::before { content: "✓"; width: auto; height: auto; background: none; color: var(--hl); font-weight: 800; font-size: .95rem; }
 .post-zeile .td-meta b { font-weight: 700; color: var(--ink); }
+/* Ladebalken beim Check (seit 24.11.2026): nur transform, wächst gleichmäßig zwischen den Schritten */
+.post-fs { display: grid; gap: 6px; }
+.pf-balken { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.pf-balken i { display: block; height: 100%; background: linear-gradient(90deg, var(--ozean), var(--cyan)); transform-origin: left center; transform: scaleX(0); transition: transform 1s linear; will-change: transform; }
+/* Wischen (seit 24.11.2026): Mail nach links ziehen, darunter To-do, Archiv, Löschen */
+.post-wisch { position: relative; overflow: hidden; border-radius: 8px; margin: 0 -8px; }
+.post-wisch > .post-zeile { position: relative; z-index: 1; padding: 4px 8px; background: var(--surface); touch-action: pan-y; transform: translate3d(0, 0, 0);
+  transition: transform .28s cubic-bezier(.2, .8, .2, 1); -webkit-user-select: none; user-select: none; }
+.post-wisch.zieht > .post-zeile { transition: none; }
+.post-wisch > .post-zeile { border-radius: 0; }
+/* Knöpfe nur sichtbar, solange gezogen wird, die Zeile offen ist oder gerade zurückgleitet (sonst blitzen Ecken am Rand) */
+.post-aktionen { position: absolute; top: 0; right: 0; bottom: 0; display: flex; visibility: hidden; }
+.post-wisch.zieht .post-aktionen, .post-wisch.auf .post-aktionen, .post-wisch.schliesst .post-aktionen { visibility: visible; }
+.post-aktionen .pa { width: 74px; border: 0; padding: 0 4px; display: grid; place-content: center; justify-items: center; gap: 3px; color: #fff; font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.post-aktionen .pa svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.post-aktionen .pa:active { filter: brightness(.9); }
+.pa[data-was="todo"] { background: var(--cyan-dunkel); } .pa[data-was="archiv"] { background: var(--ozean); }
+.pa[data-was="loeschen"] { background: var(--rot); } .pa[data-was="ausblenden"] { background: var(--muted); }
+@keyframes post-weg { 0% { opacity: 1; max-height: 180px; } 45% { opacity: 0; max-height: 180px; } 100% { opacity: 0; max-height: 0; } }
+.post-wisch.weg { animation: post-weg .38s ease-in forwards; pointer-events: none; }
+.post-wisch.weg > .post-zeile { transform: translate3d(-100%, 0, 0) !important; transition: transform .2s ease-in; }
 .liste h3.gruppe { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
 .liste h3.gruppe:first-child { margin-top: 0; }
 .liste h3.gruppe span { margin-left: 6px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
@@ -407,6 +428,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   <section class="karte post" aria-labelledby="k-post-titel">
     <h2 id="k-post-titel">Post <span id="k-post-info"></span></h2>
     <div class="post-kopf"><p class="sp-meta" id="k-post-stand"></p><button type="button" class="knopf kompakt" id="k-post-jetzt">Jetzt prüfen</button></div>
+    <div class="post-fs" id="k-post-fs" hidden><div class="pf-balken"><i id="k-post-fs-i"></i></div><p class="sp-meta" id="k-post-fs-text"></p></div>
     <div class="liste" id="k-post"><p class="zeile">Lädt</p></div>
   </section>
 
@@ -809,48 +831,169 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     return tage === 0 ? uhr : tage === 1 ? "gestern " + uhr : String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + ". " + uhr;
   }
   const naechsterCheck = () => { const h = new Date().getHours(); return h < 7 ? "7 Uhr" : h < 12 ? "12 Uhr" : h < 17 ? "17 Uhr" : "morgen 7 Uhr"; };
+  // Wischaktionen (seit 24.11.2026, Gregors Wunsch): Zeile nach links ziehen, darunter To-do, Archiv und Löschen (Gmail: To-do, Ausblenden).
+  // Die Wahl geht wie die Haken über die Schlange (offline sicher) verschlüsselt an den Server, todo-sync.ps1 ruft post\aktion.ps1.
+  // Bis der Server sie umgesetzt hat, merkt sich die App die Wahl (wv-post-lokal): gelöschte und archivierte Zeilen bleiben weg.
+  const POSTLOKAL = "wv-post-lokal";
+  const PA_ICON = {
+    todo: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.2l2.4 2.4 4.8-5"/></svg>',
+    archiv: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="4" rx="1"/><path d="M5 8.5v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-10M10 12.5h4"/></svg>',
+    loeschen: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M10 4h4M6.5 7l.9 12a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12M10 11v6M14 11v6"/></svg>',
+    ausblenden: '<svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/><path d="M4 20L20 4"/></svg>'
+  };
+  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden" };
+  let postMailsAktuell = [], postOffen = null, postWischBis = 0;
+  function postLokal(alle) {
+    const l = lies(POSTLOKAL) || {}, ids = alle.map(m => m.id);
+    let geaendert = false;
+    Object.keys(l).forEach(id => {
+      const x = l[id], m = alle.find(y => y.id === id), alt = Date.now() - (x.ts || 0) > 2 * 864e5;
+      if (alt || (x.was !== "todo" && !ids.includes(id)) || (x.was === "todo" && m && /^Auf die To-do-Liste/.test(m.aktion || ""))) { delete l[id]; geaendert = true; }
+    });
+    if (geaendert) lsSet(POSTLOKAL, JSON.stringify(l));
+    return l;
+  }
   function zeichnePost(zeitungsNeu) {
     const box = $("k-post"), info = $("k-post-info"), knopf = $("k-post-jetzt");
-    if (!privat) { box.innerHTML = '<p class="zeile">Gesperrt.</p>'; info.textContent = ""; $("k-post-stand").textContent = ""; knopf.hidden = true; return; }
+    if (!privat) { box.innerHTML = '<p class="zeile">Gesperrt.</p>'; info.textContent = ""; $("k-post-stand").textContent = ""; knopf.hidden = true; postFortschritt(false); return; }
     knopf.hidden = false;
-    const p = privat.post || null, mails = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
+    const p = privat.post || null, alle = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
+    const lokal = postLokal(alle), mails = alle.filter(m => !(lokal[m.id] && lokal[m.id].was !== "todo"));
+    postMailsAktuell = mails;
     // Antworten, die nur die Morgenzeitung kennt (Absender noch nicht in der Post), weiter zeigen
-    const zn = (zeitungsNeu || []).filter(x => !mails.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von)))));
+    const zn = (zeitungsNeu || []).filter(x => !alle.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von)))));
     const grenze = Date.now() - 24 * 3600e3, frisch = mails.filter(m => Date.parse(m.zeit) >= grenze), aelter = mails.filter(m => !(Date.parse(m.zeit) >= grenze));
-    const zeile = m => '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc([m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), m.quelle === "Gmail" ? "Gmail" : ""].filter(Boolean).join(" · ")) + "</p></div></div>";
+    const knoepfe = m => m.quelle === "Gmail" ? ["todo", "ausblenden"] : ["todo", "archiv", "loeschen"];
+    const zeile = m => {
+      const l = lokal[m.id], meta = l && l.was === "todo" ? "Kommt auf die To-do-Liste …" : [m.aktion || ARTEN[m.art] || "", postZeit(m.zeit), m.quelle === "Gmail" ? "Gmail" : ""].filter(Boolean).join(" · ");
+      return '<div class="post-wisch" data-id="' + esc(m.id) + '"><div class="post-aktionen">' + knoepfe(m).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" +
+        '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
+    };
     const znZeile = x => '<div class="eintrag todo post-zeile" data-art="antwort"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta">Antwort, aus der Morgenzeitung</p></div></div>';
     const om = offenMerk(), fuss = [];
     if (p && p.ausgeblendet) fuss.push(p.ausgeblendet + (p.ausgeblendet === 1 ? " Newsletter oder Systemmail" : " Newsletter und Systemmails") + " beim letzten Check ausgeblendet");
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
     if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
     if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
+    if (mails.length) fuss.push("Mail nach links ziehen für To-do, Archiv oder Löschen");
+    postOffen = null;
     box.innerHTML = (frisch.length || zn.length ? frisch.map(zeile).join("") + zn.map(znZeile).join("") : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>") +
       (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
       (fuss.length ? '<p class="sp-meta">' + fuss.map(esc).join(". ") + ".</p>" : "");
-    box.querySelectorAll(".td-text").forEach(x => x.onclick = () => x.closest(".eintrag").classList.toggle("voll"));
+    box.querySelectorAll(".td-text").forEach(x => x.onclick = () => { if (Date.now() < postWischBis) return; x.closest(".eintrag").classList.toggle("voll"); });
+    box.querySelectorAll(".post-wisch").forEach(wischen);
     info.textContent = frisch.length + zn.length ? frisch.length + zn.length + " neu" : "";
     postStatus();
   }
+  function wischZu(el) {
+    if (!el) return;
+    el.classList.add("schliesst"); clearTimeout(el._zu); el._zu = setTimeout(() => el.classList.remove("schliesst"), 320);
+    el.classList.remove("auf"); el.querySelector(".post-zeile").style.transform = ""; if (postOffen === el) postOffen = null;
+  }
+  function wischen(el) {
+    const z = el.querySelector(".post-zeile"), breite = () => el.querySelector(".post-aktionen").offsetWidth;
+    let s = null;
+    z.addEventListener("pointerdown", e => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis: el.classList.contains("auf") ? -breite() : 0, rich: null, lx: e.clientX, lt: performance.now(), v: 0, pos: 0 };
+    });
+    z.addEventListener("pointermove", e => {
+      if (!s || e.pointerId !== s.id) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (!s.rich) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        s.rich = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (s.rich === "v") { s = null; return; }
+        try { z.setPointerCapture(e.pointerId); } catch (x) {}
+        el.classList.add("zieht");
+        if (postOffen && postOffen !== el) wischZu(postOffen);
+      }
+      const jetzt = performance.now(); s.v = (e.clientX - s.lx) / Math.max(1, jetzt - s.lt); s.lx = e.clientX; s.lt = jetzt;
+      const b = breite(); let x = s.basis + dx;
+      if (x > 0) x *= 0.25; else if (x < -b) x = -b + (x + b) * 0.3; // über die Enden hinaus federt die Zeile
+      s.pos = x; z.style.transform = "translate3d(" + x.toFixed(1) + "px,0,0)";
+    });
+    const ende = e => {
+      if (!s || e.pointerId !== s.id) return;
+      const w = s; s = null;
+      if (w.rich !== "h") return;
+      el.classList.remove("zieht"); postWischBis = Date.now() + 350;
+      const b = breite(), auf = w.v < -0.3 ? true : w.v > 0.3 ? false : w.pos < -b * 0.4;
+      if (auf) { el.classList.add("auf"); z.style.transform = "translate3d(" + -b + "px,0,0)"; postOffen = el; } else wischZu(el);
+    };
+    z.addEventListener("pointerup", ende); z.addEventListener("pointercancel", ende);
+    // Antippen einer offenen Zeile schließt sie, statt den Text aufzuklappen
+    z.addEventListener("click", e => { if (Date.now() < postWischBis) { e.stopPropagation(); return; } if (el.classList.contains("auf")) { e.stopPropagation(); wischZu(el); } }, true);
+    el.querySelectorAll(".pa").forEach(btn => btn.onclick = e => { e.stopPropagation(); postAktion(el, btn.dataset.was); });
+  }
+  // Tippen irgendwo anders schließt eine offene Zeile
+  document.addEventListener("pointerdown", e => { if (postOffen && !postOffen.contains(e.target)) wischZu(postOffen); }, { passive: true });
+  function postAktion(el, was) {
+    const id = el.dataset.id, m = postMailsAktuell.find(x => x.id === id);
+    if (!m) return;
+    const t = was === "todo" ? ((m.von ? m.von + ": " : "") + (m.kurz || m.betreff || "")).slice(0, 300) : "";
+    const l = lies(POSTLOKAL) || {}; l[id] = { was, ts: Date.now() }; lsSet(POSTLOKAL, JSON.stringify(l));
+    const q = lies(SCHLANGE) || []; q.push({ a: "mail", was, id, t, h: "mail-" + id + "-" + was, ts: Date.now() }); lsSet(SCHLANGE, JSON.stringify(q));
+    sendeHaken();
+    if (was === "todo") { wischZu(el); const meta = el.querySelector(".td-meta"); if (meta) meta.textContent = "Kommt auf die To-do-Liste …"; }
+    else {
+      postOffen = null; el.classList.add("weg");
+      setTimeout(() => { el.remove(); const n = $("k-post").querySelectorAll(".post-wisch").length; if (!n && !$("k-post").querySelector(".post-zeile")) $("k-post").insertAdjacentHTML("afterbegin", '<p class="zeile">Alles erledigt.</p>'); }, 400);
+    }
+  }
   function postStatus() {
-    const st = $("k-post-stand"), knopf = $("k-post-jetzt"), p = privat && privat.post, seit = sitz.get(POSTANFRAGE);
+    const st = $("k-post-stand"), knopf = $("k-post-jetzt"), p = privat && privat.post, seit = sitz.get(POSTANFRAGE), f = p && p.fortschritt;
     const stand = p && p.stand ? Date.parse(p.stand) : 0, uhr = t => new Date(t).toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" });
+    // Fertig, sobald ein Check nach der Anfrage abgeschlossen ist (auch einer, der schon lief, als der Knopf gedrückt wurde)
+    const fertigUm = f && f.phase === "fertig" && f.start ? Date.parse(f.start) : 0, fertig = !(p && p.laeuft) && (stand >= (seit || 0) - 5000 || fertigUm >= (seit || 0) - 5000);
     clearTimeout(postUhr); postUhr = null;
     let text = stand ? "Geprüft " + postZeit(p.stand) + ", nächster Check " + naechsterCheck() : "Checks um 7, 12 und 17 Uhr", wartet = false;
     if (seit) {
-      if (stand >= seit - 5000 && !(p && p.laeuft)) { sitz.set(POSTANFRAGE, null); text = "Gerade geprüft um " + uhr(stand) + ", nächster Check " + naechsterCheck(); }
+      if (fertig) { sitz.set(POSTANFRAGE, null); text = "Gerade geprüft um " + uhr(Math.max(stand, fertigUm)) + ", nächster Check " + naechsterCheck(); }
       else if (Date.now() - seit > 15 * 60000) { sitz.set(POSTANFRAGE, null); text = "Der Check dauert länger als sonst, das Ergebnis kommt beim nächsten Öffnen."; }
-      else { wartet = true; text = p && p.laeuft ? "Prüfe gerade das Postfach …" : "Angefragt, der Server startet in bis zu einer Minute …"; }
-    } else if (p && p.laeuft) { wartet = true; text = "Prüfe gerade das Postfach …"; }
+      else { wartet = true; text = "Check läuft"; }
+    } else if (p && p.laeuft) { wartet = true; text = "Check läuft"; }
     st.textContent = text;
     knopf.disabled = wartet; knopf.textContent = wartet ? "Läuft …" : "Jetzt prüfen";
+    postFortschritt(wartet);
     // Während der Check läuft alle 15 Sekunden den neuen Stand holen (frischHeute tauscht den verschlüsselten Teil und zeichnet neu)
     if (wartet) postUhr = setTimeout(async () => { postUhr = null; if (!document.hidden) { try { await frischHeute(); } catch (e) {} } postStatus(); }, 15000);
+  }
+  // Ladebalken (seit 24.11.2026, Gregors Wunsch): Schätzung aus den Phasen, die der Server meldet (fortschritt: lesen, auswerten mit
+  // geschätzter Dauer je nach Zahl der Mails, fertig), plus Abholen (todo-sync jede Minute) und Anzeigen (Export und GitHub Pages).
+  // Der Balken läuft nie rückwärts und bleibt bis zum Ergebnis unter 97 %.
+  let fsUhr = null, fsMax = 0;
+  function postFortschritt(an) {
+    const box = $("k-post-fs"), balken = $("k-post-fs-i"), txt = $("k-post-fs-text");
+    if (!an) {
+      clearInterval(fsUhr); fsUhr = null;
+      if (!box.hidden && fsMax > 0) { balken.style.transform = "scaleX(1)"; txt.textContent = "Fertig."; setTimeout(() => { if (!fsUhr) box.hidden = true; }, 1600); } else box.hidden = true;
+      fsMax = 0; return;
+    }
+    box.hidden = false;
+    const schritt = () => {
+      const p = privat && privat.post, f = p && p.fortschritt, jetzt = Date.now(), fs = f && f.start ? Date.parse(f.start) : 0;
+      const seit = sitz.get(POSTANFRAGE) || fs || jetzt, aktuell = fs && fs >= seit - 90000 && f.phase !== "fertig";
+      const ABHOLEN = 45e3, LESEN = 12e3, AUSWERTEN = 60e3, ZEIGEN = 80e3;
+      let rest, text;
+      if (aktuell && f.phase === "auswerten") {
+        const r = Math.max(10e3, fs + (f.schaetzung || 60) * 1000 - jetzt); rest = r + ZEIGEN;
+        text = r > 10e3 ? (f.n ? "Werte " + f.n + (f.n === 1 ? " neue Mail" : " neue Mails") + " aus" : "Prüfe Gmail") : "Bereite die Anzeige vor";
+      } else if (aktuell) { rest = Math.max(4e3, fs + LESEN - jetzt) + AUSWERTEN + ZEIGEN; text = "Lese das Postfach"; }
+      else if (p && p.laeuft) { rest = AUSWERTEN + ZEIGEN; text = "Prüfe das Postfach"; }
+      else { rest = Math.max(8e3, seit + ABHOLEN - jetzt) + LESEN + AUSWERTEN + ZEIGEN; text = "Angefragt, der Server startet gleich"; }
+      const lauf = Math.max(0, jetzt - seit); fsMax = Math.max(fsMax, Math.min(0.97, lauf / (lauf + rest)));
+      balken.style.transform = "scaleX(" + fsMax.toFixed(3) + ")";
+      const sek = Math.round(rest / 1000);
+      txt.textContent = text + " · noch ca. " + (sek < 60 ? Math.max(10, Math.round(sek / 10) * 10) + " Sek." : Math.round(sek / 60) + " Min.");
+    };
+    schritt(); if (!fsUhr) fsUhr = setInterval(schritt, 1000);
   }
   $("k-post-jetzt").onclick = async () => {
     const k = lsGet(KEY);
     if (!k || !window.crypto || !crypto.subtle) return;
     if (nachtruhe()) { $("k-post-stand").textContent = "Nachtruhe am Server, der nächste Check läuft um 7 Uhr."; return; }
-    sitz.set(POSTANFRAGE, Date.now()); postStatus();
+    fsMax = 0; sitz.set(POSTANFRAGE, Date.now()); postStatus();
     try {
       const { thema } = await schluesselTeile(k), body = JSON.stringify(await verschluessle({ a: "post", ts: Date.now() }, k));
       const r = await fetch("https://ntfy.sh/" + thema, { method: "POST", body });
