@@ -42,7 +42,7 @@
   --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247;
   color-scheme: dark }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; /* kein Doppeltipp-Zoom, damit jeder Tipp sofort ankommt (24.11.2026) */ }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-text); font-size: 1.0625rem; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 /* iPhone: Schrift wächst mit der Systemeinstellung (Dynamic Type) */
@@ -193,11 +193,13 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 /* Vorlesen */
 .vorlesen { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 /* Mini-Player im Stil von Spotify (seit 15.11.2026): faehrt ueber der Leiste hoch, sobald etwas vorgelesen wird */
-.mini { position: fixed; left: 0; right: 0; z-index: 11; bottom: calc(var(--leiste) + env(safe-area-inset-bottom, 0px) + 8px); padding: 0 10px;
-  transform: translateY(calc(100% + var(--leiste) + 40px)); transition: transform .28s ease; pointer-events: none; }
+.mini { position: fixed; left: 0; right: 0; z-index: 12; bottom: calc(var(--leiste) + env(safe-area-inset-bottom, 0px) + 8px); padding: 0 10px;
+  transform: translate3d(0, calc(100% + var(--leiste) + 40px), 0); transition: transform .28s cubic-bezier(.2, .8, .2, 1); pointer-events: none;
+  touch-action: none; /* Wischen auf dem Player scrollt nie die Seite darunter (24.11.2026) */ }
 .mini.an { transform: none; pointer-events: auto; }
-.mini-karte { max-width: 620px; margin: 0 auto; background: var(--navy); color: #fff; border-radius: 10px; box-shadow: 0 8px 28px rgba(6, 20, 34, .35);
-  padding: 10px 12px 12px; display: grid; gap: 6px; position: relative; overflow: hidden; }
+.mini-innen { max-width: 620px; margin: 0 auto; position: relative; }
+.mini-karte { background: var(--navy); color: #fff; border-radius: 10px; box-shadow: 0 14px 28px -10px rgba(6, 20, 34, .55);
+  padding: 10px 12px 12px; display: grid; gap: 6px; position: relative; z-index: 1; overflow: hidden; }
 .mini-text { display: grid; gap: 1px; min-width: 0; }
 .mini-text b { font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-text span { font-size: .78rem; color: #9FC3DA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -211,20 +213,27 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 .mini-zu svg { width: 20px !important; height: 20px !important; }
 .mini-balken { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .18); }
 .mini-balken i { display: block; height: 100%; width: 0; background: var(--cyan); }
-/* Aufklappen (seit 24.11.2026): Tippen auf den Player faehrt ihn nach oben aus, darin die Stimmen */
+/* Aufklappen (seit 24.11.2026): Tippen oder nach oben Wischen schiebt über dem Player ein Feld mit Tempo und Stimme hoch.
+   Animiert werden nur transform und opacity (läuft auf der Grafikkarte, flüssig am iPhone), die frühere Höhenanimation ruckelte. */
 .mini-karte { cursor: pointer; }
-/* Tippen außerhalb des aufgeklappten Players klappt ihn zu; die Fläche dahinter fängt den Tipp ab, damit darunter nichts ausgelöst wird */
-.mini-hinter { position: fixed; inset: 0; z-index: 11; background: rgba(6, 20, 34, .28); opacity: 0; pointer-events: none; transition: opacity .14s ease-out; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-html.mini-offen .mini-hinter { opacity: 1; pointer-events: auto; }
-html.mini-fang .mini-hinter { pointer-events: auto; }
-.mini { touch-action: manipulation; }
-.mini-griff { position: absolute; top: 4px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, .35); }
-.mini-mehr { display: grid; grid-template-rows: 0fr; margin-top: -6px; transition: grid-template-rows .14s ease-out, margin-top .14s ease-out; }
-.mini.offen .mini-mehr { transition-duration: .2s; }
-.mini-mehr > div { overflow: hidden; min-height: 0; }
-.mini.offen .mini-mehr { grid-template-rows: 1fr; margin-top: 0; }
+.mini-blende { position: absolute; left: 0; right: 0; bottom: calc(100% - 14px); padding-top: 34px; overflow: hidden; pointer-events: none; }
+.mini-mehr { position: relative; background: var(--navy); color: #fff; border-radius: 14px 14px 0 0; padding: 18px 12px 26px; box-shadow: 0 -10px 30px rgba(6, 20, 34, .3);
+  transform: translate3d(0, 100%, 0); visibility: hidden; will-change: transform; transition: transform .2s cubic-bezier(.4, 0, 1, 1), visibility 0s linear .2s; }
+.mini.offen .mini-mehr { transform: none; visibility: visible; pointer-events: auto; transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+/* Fläche hinter dem offenen Player: Tippen oder Wischen dort klappt zu, nichts darunter wird ausgelöst oder gescrollt */
+.mini-hinter { position: fixed; inset: 0; z-index: 11; background: rgba(6, 20, 34, .32); opacity: 0; visibility: hidden; touch-action: none; will-change: opacity;
+  transition: opacity .2s ease, visibility 0s linear .2s; -webkit-tap-highlight-color: transparent; }
+.mini-hinter.an { opacity: 1; visibility: visible; transition: opacity .25s ease, visibility 0s; }
+.mini-hinter.fang { visibility: visible; }
+.mini-griff { position: absolute; top: 4px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, .35); transition: opacity .15s; }
+.mini.offen .mini-karte .mini-griff { opacity: 0; }
+.mini-mehr .mini-griff { top: 7px; }
+/* Sofortige Rückmeldung beim Antippen */
+.mini button { transition: transform .1s ease, background-color .12s ease, color .12s ease; }
+.mini button:active { transform: scale(.94); }
+.mini .mini-stimme:active, .mini .mini-tempo button:active { transform: scale(.97); }
 .mini-label { margin: 6px 0 6px; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9FC3DA; }
-.mini-stimmen { display: grid; gap: 6px; padding-bottom: 8px; }
+.mini-stimmen { display: grid; gap: 6px; }
 .mini .mini-stimme { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 46px; padding: 0 14px; border-radius: 8px; background: rgba(255, 255, 255, .09); color: #fff; font: inherit; font-size: .95rem; font-weight: 600; text-align: left; }
 .mini .mini-stimme span { font-size: .8rem; font-weight: 500; color: #9FC3DA; }
 .mini .mini-stimme[aria-checked="true"] { background: #fff; color: var(--navy); }
@@ -246,6 +255,9 @@ html.laptop .mini { bottom: 14px; }
 .zt article .kopfzeile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 3px; }
 .zt article.zu .koerper, .zt article.auf .anriss { display: none; }
 .zt .koerper { display: grid; gap: 10px; }
+/* Aufklappen eines Berichts sanft einblenden, nur opacity und transform (24.11.2026) */
+@keyframes aufgehen { from { opacity: 0; transform: translate3d(0, -6px, 0); } to { opacity: 1; transform: none; } }
+.zt article.auf .koerper { animation: aufgehen .2s ease-out; }
 .zt .anriss { margin: 0; color: var(--muted); font-size: .95rem; }
 .zt article.gelesen.zu .kopfzeile { color: var(--muted); }
 .zt article.gelesen .kopfzeile::before { content: "✓ "; color: var(--hl); font-weight: 700; }
@@ -429,7 +441,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
 <section id="v-essen" class="rahmen" aria-label="Essen" hidden><div class="laedt">Meal Prep lädt</div><iframe title="Meal Prep" data-src="../mealprep/?einbetten=1"></iframe></section>
 
 <div class="mini-hinter" id="mini-hinter" aria-hidden="true"></div>
-<div class="mini" id="mini" aria-label="Wiedergabe" aria-hidden="true"><div class="mini-karte" id="mini-karte">
+<div class="mini" id="mini" aria-label="Wiedergabe" aria-hidden="true"><div class="mini-innen">
+  <div class="mini-blende"><div class="mini-mehr" id="mini-mehr"><span class="mini-griff" aria-hidden="true"></span><p class="mini-label">Tempo</p><div class="mini-tempo" id="mini-tempo" role="radiogroup" aria-label="Lesetempo"><button type="button" role="radio" data-t="0.8">0,8×</button><button type="button" role="radio" data-t="1">1×</button><button type="button" role="radio" data-t="1.1">1,1×</button><button type="button" role="radio" data-t="1.3">1,3×</button><button type="button" role="radio" data-t="1.5">1,5×</button><button type="button" role="radio" data-t="2">2×</button><button type="button" role="radio" data-t="2.5">2,5×</button></div><p class="mini-label">Stimme</p><div class="mini-stimmen" id="mini-stimmen" role="radiogroup" aria-label="Stimme"></div></div></div>
+<div class="mini-karte" id="mini-karte">
   <span class="mini-griff" aria-hidden="true"></span>
   <div class="mini-text" id="mini-auf" role="button" tabindex="0" aria-expanded="false" aria-controls="mini-mehr" aria-label="Player öffnen, Stimme wählen"><b id="mini-titel"></b><span id="mini-ressort"></span></div>
   <div class="mini-reihe">
@@ -439,9 +453,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     <button type="button" id="mini-vor" aria-label="10 Sekunden vor"><svg viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.8 3.6v4.6h-4.6"/><text x="12" y="15.6" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui,sans-serif">10</text></svg></button>
     <button type="button" id="mini-zu" class="mini-zu" aria-label="Player schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
-  <div class="mini-mehr" id="mini-mehr"><div><p class="mini-label">Tempo</p><div class="mini-tempo" id="mini-tempo" role="radiogroup" aria-label="Lesetempo"><button type="button" role="radio" data-t="0.8">0,8×</button><button type="button" role="radio" data-t="1">1×</button><button type="button" role="radio" data-t="1.1">1,1×</button><button type="button" role="radio" data-t="1.3">1,3×</button><button type="button" role="radio" data-t="1.5">1,5×</button><button type="button" role="radio" data-t="2">2×</button><button type="button" role="radio" data-t="2.5">2,5×</button></div><p class="mini-label">Stimme</p><div class="mini-stimmen" id="mini-stimmen" role="radiogroup" aria-label="Stimme"></div></div></div>
   <div class="mini-balken"><i id="mini-fort"></i></div>
-</div></div>
+</div></div></div>
 <div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 1-7 7"/><path class="spitze" d="M5 8.4 7.9 12.6H2.1z"/></svg></div>
 <nav class="leiste" aria-label="Bereiche"><div>
   <a href="#heute" data-v="heute" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 15a5.5 5.5 0 0 1 11 0"/><path d="M3 15h18M7 19h10M12 4.5v2M5.2 8.2l1.4 1.4M18.8 8.2l-1.4 1.4"/></svg>Heute</a>
@@ -1007,31 +1020,52 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (!id || id === stimmAktiv) return;
     stimmWahl = stimmAktiv = id; lsSet("wv-stimme", id);
     $("mini-stimmen").querySelectorAll(".mini-stimme").forEach(b => b.setAttribute("aria-checked", String(b.dataset.id === id)));
-    if (lesen.an) { const a = lesen.liste[lesen.pos]; vorlesen(a ? a.id : undefined); }
+    if (lesen.an) {
+      const a = lesen.liste[lesen.pos]; vorlesen(a ? a.id : undefined);
+      // Sofort zeigen, dass gewechselt wird; die neue Datei braucht einen Moment, bis sie spielt
+      if (lesen.modus === "gesamt") { $("mini-ressort").textContent = "Neue Stimme lädt …"; stimmLaedt = true; }
+    }
   }
+  let stimmLaedt = false;
+  spieler.addEventListener("playing", () => { if (stimmLaedt) { stimmLaedt = false; const a = lesen.liste[lesen.pos]; if (a && lesen.an) $("mini-ressort").textContent = a.ressort + " · Ausgabe " + (lesen.g ? lesen.g.ausgabe : zeitung.ausgabe); } });
   function miniOffen(an) {
     $("mini").classList.toggle("offen", an);
-    document.documentElement.classList.toggle("mini-offen", an);
+    $("mini-hinter").classList.toggle("an", an);
     $("mini-auf").setAttribute("aria-expanded", String(an));
     $("mini-auf").setAttribute("aria-label", an ? "Player zuklappen" : "Player öffnen, Stimme wählen");
   }
+  const istOffen = () => $("mini").classList.contains("offen");
   // Tippen irgendwo auf den Player (außer auf Knöpfe) klappt ihn auf und wieder zu
-  $("mini-karte").addEventListener("click", e => { if (e.target.closest("button, .mini-mehr")) return; miniOffen(!$("mini").classList.contains("offen")); });
-  // Schon beim Berühren zuklappen, nicht erst beim Loslassen (Gregor 24.11.: fühlte sich verzögert an). Die Fläche fängt danach
+  let wischBis = 0;
+  $("mini-karte").addEventListener("click", e => { if (Date.now() < wischBis || e.target.closest("button")) return; miniOffen(!istOffen()); });
+  // Schon beim Berühren außerhalb zuklappen, nicht erst beim Loslassen (Gregor 24.11.: fühlte sich verzögert an). Die Fläche fängt danach
   // noch kurz den Klick ab, der beim Loslassen kommt, damit darunter nichts ausgelöst wird.
   let fangUhr = 0;
   const aussenZu = () => {
-    if (!$("mini").classList.contains("offen")) return;
+    if (!istOffen()) return;
     miniOffen(false);
-    document.documentElement.classList.add("mini-fang");
-    clearTimeout(fangUhr); fangUhr = setTimeout(() => document.documentElement.classList.remove("mini-fang"), 450);
+    $("mini-hinter").classList.add("fang");
+    clearTimeout(fangUhr); fangUhr = setTimeout(() => $("mini-hinter").classList.remove("fang"), 450);
   };
   $("mini-hinter").addEventListener("pointerdown", aussenZu);
-  $("mini-hinter").addEventListener("click", () => { miniOffen(false); clearTimeout(fangUhr); document.documentElement.classList.remove("mini-fang"); });
+  $("mini-hinter").addEventListener("click", () => { miniOffen(false); clearTimeout(fangUhr); $("mini-hinter").classList.remove("fang"); });
   // Rand neben der Karte gehört zum Player-Element, zählt aber als außerhalb
   $("mini").addEventListener("pointerdown", e => { if (e.target === $("mini")) aussenZu(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && $("mini").classList.contains("offen")) miniOffen(false); });
-  $("mini-auf").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); miniOffen(!$("mini").classList.contains("offen")); } });
+  // Wischen (24.11.2026): auf dem Player nach oben öffnet, nach unten schließt. Weder hier noch auf der Fläche dahinter scrollt die Seite
+  // (touch-action: none in CSS, dazu preventDefault für ältere iOS-Versionen). Die Listener hängen nur an Player und Fläche, nicht am Dokument.
+  let wy = null;
+  $("mini").addEventListener("touchstart", e => { wy = e.touches.length === 1 ? e.touches[0].clientY : null; }, { passive: true });
+  $("mini").addEventListener("touchmove", e => {
+    if (e.cancelable) e.preventDefault();
+    if (wy === null) return;
+    const dy = e.touches[0].clientY - wy;
+    if (dy < -24 && !istOffen()) { miniOffen(true); wy = null; wischBis = Date.now() + 400; }
+    else if (dy > 24 && istOffen()) { miniOffen(false); wy = null; wischBis = Date.now() + 400; }
+  }, { passive: false });
+  $("mini").addEventListener("touchend", () => { wy = null; }, { passive: true });
+  $("mini-hinter").addEventListener("touchmove", e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && istOffen()) miniOffen(false); });
+  $("mini-auf").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); miniOffen(!istOffen()); } });
   function gesamtAudio(alle) {
     const s = zeitung && zeitung.audioStimmen, w = s && s[stimmWahl];
     const g = passt(w, alle.length) ? w : zeitung && zeitung.audioGesamt;
@@ -1343,7 +1377,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       if (e.target && e.target.closest && e.target.closest(NICHT)) return;
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }, { passive: true });
-    document.addEventListener("touchmove", e => {
+    // Seit 24.11.2026 hängt dieser blockierende Listener nur am Dokument, solange die Seite ganz oben steht. Vorher hing er immer,
+    // dadurch lief jedes Scrollen am iPhone über JavaScript und ruckelte (Gregor: wenig FPS). Weiter unten scrollt die Seite jetzt frei.
+    const ziehen = e => {
       if (!start) return;
       if (e.touches.length !== 1) { start = null; if (aktiv) { aktiv = false; zurueck(); } return; }
       const dx = e.touches[0].clientX - start.x, dy = e.touches[0].clientY - start.y;
@@ -1356,7 +1392,18 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       if (e.cancelable) e.preventDefault();
       weg = Math.max(0, dy) * .5; // Widerstand: der Finger muss ungefähr doppelt so weit ziehen
       zeige(weg);
-    }, { passive: false });
+    };
+    let ziehenAn = false;
+    function ziehenPruefen() {
+      const soll = window.scrollY <= 0 && ansichtOk();
+      if (soll === ziehenAn) return;
+      ziehenAn = soll;
+      if (soll) document.addEventListener("touchmove", ziehen, { passive: false });
+      else document.removeEventListener("touchmove", ziehen, { passive: false });
+    }
+    window.addEventListener("scroll", ziehenPruefen, { passive: true });
+    window.addEventListener("hashchange", ziehenPruefen);
+    ziehenPruefen();
     function ende() {
       if (!start) return;
       const war = aktiv, d = weg;
@@ -1364,8 +1411,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       if (!war) return;
       if (d >= SCHWELLE) aktualisieren(); else zurueck();
     }
-    document.addEventListener("touchend", ende);
-    document.addEventListener("touchcancel", () => { if (start && aktiv) { start = null; aktiv = false; weg = 0; zurueck(); } else start = null; });
+    document.addEventListener("touchend", ende, { passive: true });
+    document.addEventListener("touchcancel", () => { if (start && aktiv) { start = null; aktiv = false; weg = 0; zurueck(); } else start = null; }, { passive: true });
   })();
 
   // ---------- Start ----------
