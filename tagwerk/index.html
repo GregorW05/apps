@@ -143,6 +143,7 @@ h1 { margin: 2px 0 0; font-size: 1.9rem; line-height: 1.15; letter-spacing: -.01
 .post-zeile.ungelesen .td-punkt::before { background: var(--cyan); box-shadow: none; }
 details.post-konto summary .ung { color: var(--cyan-dunkel); font-weight: 700; }
 details.post-konto summary b { color: var(--ink); }
+.pa[data-was="abbestellen"] { background: var(--navy); }
 .post-titel { margin: 6px 0 0; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 html.laptop .kal { grid-template-columns: 32px repeat(var(--spalten), minmax(0, 1fr)); }
 html.laptop .kal-t { font-size: .78rem; padding: 3px 5px; } html.laptop .kal-t span { font-size: .7rem; }
@@ -1098,7 +1099,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   PA_ICON.heute = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>';
   PA_ICON.morgen = '<svg viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></svg>';
   PA_ICON.tag = '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>';
-  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", heute: "Heute, P1", morgen: "Morgen", tag: "Tag" };
+  PA_ICON.abbestellen = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6M15.5 15.5l4 4M19.5 15.5l-4 4"/></svg>';
+  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", heute: "Heute, P1", morgen: "Morgen", tag: "Tag", abbestellen: "Abbestellen" };
   let postMailsAktuell = [], postOffen = null, postWischBis = 0;
   const EINGANGLOKAL = "wv-eingang-lokal";
   let postEingangAktuell = [], postZnLetzt = null;
@@ -1146,13 +1148,17 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
     if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
     if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
-    if (mails.length || eIds.size) fuss.push("Mail nach rechts ziehen für To-do, Archiv oder Löschen, nach links ziehen zeigt die Postfächer");
+    // Zuletzt abbestellt (seit 24.11.2026): Absender und Ergebnis der letzten Tage
+    const abb = p && Array.isArray(p.abbestellt) ? p.abbestellt.slice(-3).reverse() : [];
+    if (abb.length) fuss.push("Abbestellt: " + abb.map(a => (a.von || "Absender") + " (" + (/^OK/.test(a.ergebnis) ? "erledigt" : /^TEIL/.test(a.ergebnis) ? "noch ein Klick nötig, steht in den To-dos" : /^KEIN/.test(a.ergebnis) ? "kein Abmeldeweg, nur gelöscht" : "fehlgeschlagen") + ")").join(", "));
+    if (mails.length || eIds.size) fuss.push("Mail nach rechts ziehen für To-do, Archiv, Löschen oder Abbestellen (wo der Absender es anbietet), nach links ziehen zeigt die Postfächer");
     postOffen = null;
     // Je Konto ein aufklappbarer Block: Kopf mit Anzahl und ungelesenen, darin die Mails (ungelesen mit cyan Punkt)
     let eHtml = "", eGesamt = 0, eUngelesen = 0;
     const eZeile = m => {
       const c = checkZu[m.id], meta = [postZeit(m.zeit), m.anh ? "Anhang" : "", c ? (c.aktion || ARTEN[c.art] || "") : ""].filter(Boolean).join(" · ");
-      return '<div class="post-wisch" data-id="' + esc(m.id) + '" data-e="1"><div class="post-aktionen links">' + knoepfe().map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" +
+      // Abbestellen nur, wenn die Mail einen Abmeldeweg im Kopf hat (List-Unsubscribe, seit 24.11.2026), nie über Links im Text
+      return '<div class="post-wisch" data-id="' + esc(m.id) + '" data-e="1"><div class="post-aktionen links">' + knoepfe().concat(m.ab ? ["abbestellen"] : []).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" +
         '<div class="eintrag todo post-zeile' + (m.neu ? " ungelesen" : "") + '" data-art="eingang"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.betreff || "(ohne Betreff)") +
         (m.kurz ? '<span class="td-rest"> · ' + esc(m.kurz) + "</span>" : "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
     };
