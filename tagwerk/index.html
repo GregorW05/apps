@@ -132,6 +132,30 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .post-zeile .td-meta b { font-weight: 700; color: var(--ink); }
 /* Ladebalken beim Check (seit 24.11.2026): nur transform, wächst gleichmäßig zwischen den Schritten */
 .post-fs { display: grid; gap: 6px; }
+/* Postfächer mit Live-Punkten (seit 24.11.2026): Karte nach links ziehen oder auf die Punkte im Kopf tippen, rechts erscheinen die Adressen */
+.karte.post { --gruen: #1E9E57; }
+@media (prefers-color-scheme: dark) { .karte.post { --gruen: #3DD68C; } }
+.kp { margin: 0 auto 0 8px; padding: 4px 6px; border: 0; background: none; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; align-self: center; }
+.pp { position: relative; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.pp.an { background: var(--gruen); }
+.pp.an::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; background: var(--gruen); opacity: 0; animation: post-puls 2.4s ease-out infinite; }
+@keyframes post-puls { 0% { transform: scale(.5); opacity: .55; } 100% { transform: scale(1.9); opacity: 0; } }
+.pp.aus { background: var(--rot); }
+.kp .pp.an { background: #5BE39A; } .kp .pp.an::after { background: #5BE39A; } .kp .pp.aus { background: #FF9AA6; }
+.post-koerper { position: relative; overflow: hidden; margin: 0 -16px -16px; }
+.post-schieber { position: relative; z-index: 1; display: grid; gap: 10px; padding: 0 16px 16px; background: var(--surface); touch-action: pan-y;
+  transform: translate3d(0, 0, 0); transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s; }
+.post-koerper.zieht .post-schieber { transition: none; }
+.post-koerper.zieht .post-schieber, .post-koerper.auf .post-schieber { box-shadow: 8px 0 14px -8px rgba(6, 20, 34, .35); }
+.post-konten { position: absolute; top: 0; right: 0; bottom: 0; width: 236px; padding: 2px 16px 16px 14px; display: grid; align-content: start; gap: 12px;
+  background: var(--surface-2); visibility: hidden; }
+.post-koerper.zieht .post-konten, .post-koerper.auf .post-konten, .post-koerper.schliesst .post-konten { visibility: visible; }
+.pk-titel { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label); }
+.pk { display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 9px; align-items: start; }
+.pk .pp { margin-top: 5px; }
+.pk b { display: block; font-size: .84rem; font-weight: 650; overflow-wrap: anywhere; line-height: 1.3; }
+.pk span { display: block; font-size: .76rem; color: var(--muted); line-height: 1.3; }
+.pk span.live { color: var(--gruen); font-weight: 700; }
 .pf-balken { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .pf-balken i { display: block; height: 100%; background: linear-gradient(90deg, var(--ozean), var(--cyan)); transform-origin: left center; transform: scaleX(0); transition: transform 1s linear; will-change: transform; }
 /* Wischen (seit 24.11.2026): Mail nach links ziehen, darunter To-do, Archiv, Löschen */
@@ -426,10 +450,15 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
 
   <!-- Post (seit 24.11.2026, Gregors Wunsch): Postfach-Check des Servers um 7, 12 und 17 Uhr und auf Knopfdruck -->
   <section class="karte post" aria-labelledby="k-post-titel">
-    <h2 id="k-post-titel">Post <span id="k-post-info"></span></h2>
+    <h2 id="k-post-titel">Post<button type="button" class="kp" id="k-post-punkte" aria-label="Postfächer anzeigen" aria-expanded="false"></button><span id="k-post-info"></span></h2>
+    <div class="post-koerper" id="post-koerper">
+    <div class="post-konten" id="post-konten" aria-label="Postfächer im Check"></div>
+    <div class="post-schieber" id="post-schieber">
     <div class="post-kopf"><p class="sp-meta" id="k-post-stand"></p><button type="button" class="knopf kompakt" id="k-post-jetzt">Jetzt prüfen</button></div>
     <div class="post-fs" id="k-post-fs" hidden><div class="pf-balken"><i id="k-post-fs-i"></i></div><p class="sp-meta" id="k-post-fs-text"></p></div>
     <div class="liste" id="k-post"><p class="zeile">Lädt</p></div>
+    </div>
+    </div>
   </section>
 
   <section class="karte todos" aria-labelledby="k-todos-titel">
@@ -855,7 +884,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   }
   function zeichnePost(zeitungsNeu) {
     const box = $("k-post"), info = $("k-post-info"), knopf = $("k-post-jetzt");
-    if (!privat) { box.innerHTML = '<p class="zeile">Gesperrt.</p>'; info.textContent = ""; $("k-post-stand").textContent = ""; knopf.hidden = true; postFortschritt(false); return; }
+    if (!privat) { box.innerHTML = '<p class="zeile">Gesperrt.</p>'; info.textContent = ""; $("k-post-stand").textContent = ""; knopf.hidden = true; postFortschritt(false); $("k-post-punkte").innerHTML = ""; $("post-konten").innerHTML = ""; return; }
+    zeichneKonten(privat.post && privat.post.konten);
     knopf.hidden = false;
     const p = privat.post || null, alle = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
     const lokal = postLokal(alle), mails = alle.filter(m => !(lokal[m.id] && lokal[m.id].was !== "todo"));
@@ -885,6 +915,60 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     info.textContent = frisch.length + zn.length ? frisch.length + zn.length + " neu" : "";
     postStatus();
   }
+  // Postfächer (seit 24.11.2026, Gregors Wunsch): grüner Punkt = wird live geprüft, rot = nicht verbunden. Kopf zeigt nur die Punkte,
+  // die Fläche hinter der Karte die Adressen. Daten aus privat.post.konten (export_app.py post()).
+  function zeichneKonten(konten) {
+    const k = Array.isArray(konten) ? konten : [];
+    $("k-post-punkte").innerHTML = k.map(x => '<i class="pp ' + (x.live ? "an" : "aus") + '"></i>').join("");
+    $("k-post-punkte").title = k.map(x => x.adresse + (x.live ? " live" : " aus")).join(", ");
+    $("post-konten").innerHTML = '<p class="pk-titel">Postfächer im Check</p>' + k.map(x => '<div class="pk"><i class="pp ' + (x.live ? "an" : "aus") + '"></i><div><b>' + esc(x.adresse) + "</b>" +
+      '<span class="' + (x.live ? "live" : "") + '">' + (x.live ? "live" : "nicht verbunden") + "</span><span>" + esc(x.info || "") + "</span></div></div>").join("");
+  }
+  // Karte nach links ziehen (nicht auf einer Mail, die hat ihr eigenes Wischen): darunter erscheinen rechts die Postfächer
+  (function () {
+    const k = $("post-koerper"), sch = $("post-schieber"), breite = () => $("post-konten").offsetWidth;
+    let s = null, bis = 0;
+    function setze(auf) {
+      k.classList.add("schliesst"); clearTimeout(k._zu); k._zu = setTimeout(() => k.classList.remove("schliesst"), 340);
+      k.classList.toggle("auf", auf); sch.style.transform = auf ? "translate3d(" + -breite() + "px,0,0)" : "";
+      $("k-post-punkte").setAttribute("aria-expanded", String(auf));
+    }
+    k.addEventListener("pointerdown", e => {
+      if ((e.pointerType === "mouse" && e.button !== 0) || e.target.closest(".post-wisch, button, a, .post-konten")) return;
+      s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis: k.classList.contains("auf") ? -breite() : 0, rich: null, punkte: [{ x: e.clientX, t: performance.now() }], pos: 0 };
+    });
+    k.addEventListener("pointermove", e => {
+      if (!s || e.pointerId !== s.id) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      s.punkte.push({ x: e.clientX, t: performance.now() }); if (s.punkte.length > 12) s.punkte.shift();
+      if (!s.rich) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        s.rich = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (s.rich === "v") { s = null; return; }
+        try { k.setPointerCapture(e.pointerId); } catch (x) {}
+        k.classList.add("zieht");
+      }
+      const b = breite(); let x = s.basis + dx;
+      if (x > 0) x *= 0.25; else if (x < -b) x = -b + (x + b) * 0.3;
+      s.pos = x; sch.style.transform = "translate3d(" + x.toFixed(1) + "px,0,0)";
+    });
+    const ende = e => {
+      if (!s || e.pointerId !== s.id) return;
+      const w = s; s = null;
+      if (w.rich !== "h") return;
+      k.classList.remove("zieht"); bis = Date.now() + 350;
+      const ps = w.punkte, z = ps[ps.length - 1], a = ps.find(q => z.t - q.t <= 100) || ps[0];
+      const v = performance.now() - z.t > 120 || z.t - a.t < 8 ? 0 : (z.x - a.x) / (z.t - a.t), b = breite();
+      setze(v < -0.25 ? true : v > 0.25 ? false : w.pos < -b * 0.35);
+    };
+    k.addEventListener("pointerup", ende); k.addEventListener("pointercancel", ende);
+    // Nach dem Ziehen keinen Klick (z. B. "Ältere" auf- oder zuklappen); offen schließt ein Tipp auf die Karte
+    k.addEventListener("click", e => {
+      if (Date.now() < bis) { e.stopPropagation(); e.preventDefault(); return; }
+      if (k.classList.contains("auf") && !e.target.closest(".post-konten")) { e.stopPropagation(); e.preventDefault(); setze(false); }
+    }, true);
+    $("k-post-punkte").addEventListener("click", e => { e.stopPropagation(); setze(!k.classList.contains("auf")); });
+  })();
   function wischZu(el) {
     if (!el) return;
     el.classList.add("schliesst"); clearTimeout(el._zu); el._zu = setTimeout(() => el.classList.remove("schliesst"), 320);
