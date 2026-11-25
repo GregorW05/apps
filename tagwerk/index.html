@@ -1139,6 +1139,14 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", erledigt: "Erledigt", heute: "Heute, P1", morgen: "Morgen", tag: "Tag", abbestellen: "Abbestellen" };
   let postMailsAktuell = [], postOffen = null, postWischBis = 0;
   const EINGANGLOKAL = "wv-eingang-lokal";
+  // Abbestellt-Hinweis nur bis zum nächsten Neuladen (25.11.2026): beim Start gilt alles als gesehen, was zuletzt angezeigt wurde
+  const ABBGEZEIGT = "wv-abb-gezeigt", ABBWEG = "wv-abb-weg", abbSchluessel = a => String(a.ts || "") + "|" + String(a.von || "");
+  let abbErsterStart = lies(ABBWEG) === null; // erster Start mit dieser Version: was schon dasteht, hat Gregor gesehen
+  (function () {
+    const w = Object.assign(lies(ABBWEG) || {}, lies(ABBGEZEIGT) || {});
+    Object.keys(w).forEach(k => { if (Date.now() - w[k] > 14 * 864e5) delete w[k]; });
+    lsSet(ABBWEG, JSON.stringify(w)); lsSet(ABBGEZEIGT, "{}");
+  })();
   let postEingangAktuell = [], postZnLetzt = null;
   // Seit 25.11.2026 (Gregor: bei manchen Mails gingen die Knöpfe beim Ziehen nicht auf): Die Karte wurde mitten im Ziehen neu gezeichnet
   // (Abgleich alle 2 Minuten, Haken, 0,4 s nach der vorigen Aktion), dabei verlor die Zeile den Finger. Neuzeichnen wartet jetzt, solange
@@ -1209,8 +1217,11 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
     if (p && p.hinweis && !/gmail/i.test(p.hinweis)) fuss.push(String(p.hinweis).replace(/\.$/, ""));
     if (p && p.fehler) fuss.push(String(p.fehler).replace(/\.$/, ""));
-    // Zuletzt abbestellt (seit 24.11.2026): Absender und Ergebnis der letzten Tage
-    const abb = p && Array.isArray(p.abbestellt) ? p.abbestellt.slice(-3).reverse() : [];
+    // Zuletzt abbestellt (seit 24.11.2026): Absender und Ergebnis. Seit 25.11.2026 (Gregor) nur bis zum nächsten Neuladen der Seite:
+    // was einmal angezeigt wurde, merkt sich wv-abb-gezeigt, beim nächsten Start wandert es nach wv-abb-weg und bleibt weg
+    if (abbErsterStart && p && Array.isArray(p.abbestellt)) { const w = lies(ABBWEG) || {}; p.abbestellt.forEach(a => { w[abbSchluessel(a)] = Date.now(); }); lsSet(ABBWEG, JSON.stringify(w)); abbErsterStart = false; }
+    const abbWeg = lies(ABBWEG) || {}, abb =(p && Array.isArray(p.abbestellt) ? p.abbestellt.slice(-3).reverse() : []).filter(a => !abbWeg[abbSchluessel(a)]);
+    if (abb.length) { const g = lies(ABBGEZEIGT) || {}; abb.forEach(a => { g[abbSchluessel(a)] = Date.now(); }); lsSet(ABBGEZEIGT, JSON.stringify(g)); }
     if (abb.length) fuss.push("Abbestellt: " + abb.map(a => (a.von || "Absender") + " (" + (/^OK/.test(a.ergebnis) ? "erledigt" : /^TEIL/.test(a.ergebnis) ? "noch ein Klick nötig, steht in den To-dos" : /^KEIN/.test(a.ergebnis) ? "kein Abmeldeweg, nur gelöscht" : "fehlgeschlagen") + ")").join(", "));
     if (mails.length || eIds.size) fuss.push("Mail nach rechts ziehen für To-do, Archiv, Löschen oder Abbestellen (wo der Absender es anbietet), nach links ziehen zeigt die Postfächer");
     postOffen = null;
