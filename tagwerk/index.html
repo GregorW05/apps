@@ -216,7 +216,25 @@ html.laptop .kal-g { font-size: .76rem; } html.laptop .kal-tag { font-size: .78r
 .post-aktionen .pa svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .post-aktionen .pa:active { filter: brightness(.9); }
 .pa[data-was="todo"] { background: var(--cyan-dunkel); } .pa[data-was="archiv"] { background: var(--ozean); }
-.pa[data-was="loeschen"] { background: var(--rot); } .pa[data-was="ausblenden"] { background: var(--muted); }
+.pa[data-was="loeschen"] { background: var(--rot); } .pa[data-was="ausblenden"] { background: var(--muted); } .pa[data-was="erledigt"] { background: var(--petrol); }
+/* Lesemodus der Post (seit 25.11.2026): ganze Mail über der App, Kopf und Knöpfe fest, nur der Text scrollt */
+.leser { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--surface); color: var(--ink);
+  transform: translate3d(0, 100%, 0); visibility: hidden; transition: transform .22s cubic-bezier(.4, 0, 1, 1), visibility 0s linear .22s; }
+.leser.an { transform: none; visibility: visible; transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+.leser-kopf { display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px 16px; background: var(--petrol); color: #fff; }
+.leser-kopf b { flex: 1; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.leser-zu { width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: #fff; font: inherit; font-size: 1.7rem; line-height: 1; cursor: pointer; }
+.leser-text { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 18px max(16px, env(safe-area-inset-left, 0px)) 28px; }
+.leser-text > * { max-width: 680px; margin-left: auto; margin-right: auto; }
+.leser-text h2 { margin-top: 0; margin-bottom: 6px; font-size: 1.18rem; line-height: 1.3; overflow-wrap: anywhere; }
+.leser-meta { margin-top: 0; margin-bottom: 16px; color: var(--muted); font-size: .88rem; }
+.leser-meta b { color: var(--ink); font-weight: 650; }
+.leser-body { margin-top: 0; margin-bottom: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1rem; line-height: 1.5; }
+.leser-body.leser-hinweis { color: var(--muted); }
+.leser-fuss { display: flex; padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--navy); }
+.leser-fuss .pa { flex: 1; min-height: 62px; border: 0; padding: 6px 4px; display: grid; place-content: center; justify-items: center; gap: 3px; color: #fff; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.leser-fuss .pa svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.post-zeile.hat-voll .td-meta::after { content: " · lesen ›"; color: var(--hl); font-weight: 650; }
 @keyframes post-weg { 0% { opacity: 1; max-height: 180px; } 45% { opacity: 0; max-height: 180px; } 100% { opacity: 0; max-height: 0; } }
 .post-wisch.weg { animation: post-weg .38s ease-in forwards; pointer-events: none; }
 .post-wisch.weg > .post-zeile { transform: translate3d(-100%, 0, 0) !important; transition: transform .2s ease-in; }
@@ -575,6 +593,11 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
 <section id="v-lernen" class="rahmen" aria-label="Lernen" hidden><div class="laedt">Lernkartei lädt</div><iframe title="Lernkartei" data-src="../lernkartei/?einbetten=1"></iframe></section>
 <section id="v-essen" class="rahmen" aria-label="Essen" hidden><div class="laedt">Meal Prep lädt</div><iframe title="Meal Prep" data-src="../mealprep/?einbetten=1"></iframe></section>
 
+<div class="leser" id="leser" role="dialog" aria-modal="true" aria-labelledby="leser-betreff" hidden>
+  <div class="leser-kopf"><b id="leser-titel">Mail</b><button type="button" class="leser-zu" id="leser-zu" aria-label="Schließen">×</button></div>
+  <div class="leser-text" id="leser-text"><h2 id="leser-betreff"></h2><p class="leser-meta" id="leser-meta"></p><p class="leser-body" id="leser-body"></p></div>
+  <div class="leser-fuss" id="leser-fuss"></div>
+</div>
 <div class="mini-hinter" id="mini-hinter" aria-hidden="true"></div>
 <div class="mini" id="mini" aria-label="Wiedergabe" aria-hidden="true"><div class="mini-innen">
   <div class="mini-blende"><div class="mini-mehr" id="mini-mehr"><span class="mini-griff" aria-hidden="true"></span><p class="mini-label">Tempo</p><div class="mini-tempo" id="mini-tempo" role="radiogroup" aria-label="Lesetempo"><button type="button" role="radio" data-t="0.8">0,8×</button><button type="button" role="radio" data-t="1">1×</button><button type="button" role="radio" data-t="1.1">1,1×</button><button type="button" role="radio" data-t="1.3">1,3×</button><button type="button" role="radio" data-t="1.5">1,5×</button><button type="button" role="radio" data-t="2">2×</button><button type="button" role="radio" data-t="2.5">2,5×</button></div><p class="mini-label">Stimme</p><div class="mini-stimmen" id="mini-stimmen" role="radiogroup" aria-label="Stimme"></div></div></div>
@@ -1122,8 +1145,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   // ein Finger auf einer Zeile liegt, die Karte gezogen wird oder Knöpfe offen sind (offen höchstens 15 s), und holt es danach nach.
   let postFinger = false, postNachher = null, postNachherUhr = null;
   function postBeschaeftigt() {
-    const k = $("post-koerper");
-    return postFinger || !!(k && k.classList.contains("zieht")) || !!(postOffen && postOffen.isConnected && Date.now() - (postOffen._aufSeit || 0) < 15000);
+    const k = $("post-koerper"), lsr = $("leser");
+    return postFinger || !!(lsr && !lsr.hidden) || !!(k && k.classList.contains("zieht")) || !!(postOffen && postOffen.isConnected && Date.now() - (postOffen._aufSeit || 0) < 15000);
   }
   function postNachholen() {
     clearTimeout(postNachherUhr); postNachherUhr = null;
@@ -1197,7 +1220,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       const c = checkZu[m.id], meta = [postZeit(m.zeit), m.anh ? "Anhang" : "", c ? (c.aktion || ARTEN[c.art] || "") : ""].filter(Boolean).join(" · ");
       // Abbestellen nur, wenn die Mail einen Abmeldeweg im Kopf hat (List-Unsubscribe, seit 24.11.2026), nie über Links im Text
       return '<div class="post-wisch" data-id="' + esc(m.id) + '" data-e="1"><div class="post-aktionen links">' + knoepfe().concat(m.ab ? ["abbestellen"] : []).map(w => '<button type="button" class="pa" data-was="' + w + '" aria-label="' + PA_TEXT[w] + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("") + "</div>" +
-        '<div class="eintrag todo post-zeile' + (m.neu ? " ungelesen" : "") + '" data-art="eingang"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.betreff || "(ohne Betreff)") +
+        '<div class="eintrag todo post-zeile' + (m.neu ? " ungelesen" : "") + (m.voll ? " hat-voll" : "") + '" data-art="eingang"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.betreff || "(ohne Betreff)") +
         (m.kurz ? '<span class="td-rest"> · ' + esc(m.kurz) + "</span>" : "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
     };
     if (ein) ein.filter(k => (k.mails || []).length || k.konto !== "MBS").forEach(k => {
@@ -1212,11 +1235,56 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       : (checkHtml ? checkHtml : '<p class="zeile">' + (p && p.stand ? "Seit gestern nichts, was dich betrifft." : "Noch kein Check gelaufen.") + "</p>")) +
       (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
       (fuss.length ? '<p class="sp-meta">' + fuss.map(esc).join(". ") + ".</p>" : "");
-    box.querySelectorAll(".td-text").forEach(x => x.onclick = () => { if (Date.now() < postWischBis) return; x.closest(".eintrag").classList.toggle("voll"); });
+    // Antippen: Mails mit ganzem Text öffnen den Lesemodus (seit 25.11.2026), alle anderen klappen wie bisher die Vorschau auf
+    box.querySelectorAll(".td-inhalt").forEach(x => x.onclick = () => {
+      if (Date.now() < postWischBis) return;
+      const w = x.closest(".post-wisch"), m = w && w.dataset.e ? postEingangAktuell.find(y => y.id === w.dataset.id) : null;
+      if (m && m.voll) { leserAuf(w); return; }
+      x.closest(".eintrag").classList.toggle("voll");
+    });
     box.querySelectorAll(".post-wisch").forEach(el => wischen(el, el.dataset.e ? eingangAktion : el.dataset.z ? znAktion : null, true));
     info.textContent = ein ? (eUngelesen ? eUngelesen + " ungelesen" : eGesamt ? eGesamt + " im Eingang" : "Eingang leer") : (frisch.length + zn.length ? frisch.length + zn.length + " neu" : "");
     postStatus();
   }
+  // ---------- Lesemodus der Post (seit 25.11.2026, Gregors Wunsch: Vorschau in der Karte, antippen zeigt die ganze Mail) ----------
+  // Die ganze Mail liegt verschlüsselt in zeitung/post/<id>.json (export_app.py mail_texte, Text aus post\text auf dem Server).
+  // Unten dieselben Knöpfe wie beim Ziehen; Schließen per ×, Escape oder Zurück (eigener Verlaufseintrag).
+  let leserZeile = null;
+  async function leserAuf(el) {
+    const id = el.dataset.id, m = postEingangAktuell.find(x => x.id === id);
+    if (!m) return;
+    leserZeile = el;
+    const L = $("leser"), body = $("leser-body");
+    $("leser-titel").textContent = m.konto || "Mail";
+    $("leser-betreff").textContent = m.betreff || "(ohne Betreff)";
+    $("leser-meta").innerHTML = (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(postZeit(m.zeit)) + (m.anh ? " · mit Anhang, der nur in Outlook zu sehen ist" : "");
+    body.textContent = "Lädt …"; body.classList.add("leser-hinweis");
+    $("leser-fuss").innerHTML = ["todo", "archiv", "loeschen"].concat(m.ab ? ["abbestellen"] : []).map(w => '<button type="button" class="pa" data-was="' + w + '">' + PA_ICON[w] + "<span>" + PA_TEXT[w] + "</span></button>").join("");
+    $("leser-fuss").querySelectorAll(".pa").forEach(b => b.onclick = () => { const z = leserZeile; leserZu(); if (z && z.isConnected) eingangAktion(z, b.dataset.was); });
+    $("leser-text").scrollTop = 0;
+    L.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => { if (leserZeile === el) L.classList.add("an"); }));
+    try { if (!(history.state && history.state.leser)) history.pushState({ leser: 1 }, ""); } catch (e) {}
+    try {
+      const r = await fetch("zeitung/post/" + id + ".json", { cache: "no-cache" });
+      if (!r.ok) throw new Error("fehlt");
+      const d = await entschluessle(await r.json(), lsGet(KEY));
+      if (leserZeile !== el) return;
+      body.textContent = d.text || "(kein Text)"; body.classList.remove("leser-hinweis");
+    } catch (e) {
+      if (leserZeile !== el) return;
+      body.textContent = (m.kurz ? m.kurz + "\n\n" : "") + "Die ganze Mail ist noch nicht in der App. Sie kommt meist innerhalb von zwei Minuten, dann bitte noch einmal antippen.";
+    }
+  }
+  function leserZu(ausVerlauf) {
+    const L = $("leser");
+    if (L.hidden) return;
+    L.classList.remove("an"); leserZeile = null;
+    setTimeout(() => { if (!L.classList.contains("an")) L.hidden = true; }, 260);
+    if (!ausVerlauf && history.state && history.state.leser) { try { history.back(); } catch (e) {} }
+  }
+  $("leser-zu").onclick = () => leserZu();
+  window.addEventListener("popstate", () => leserZu(true));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") leserZu(); });
   // Antworten aus der Morgenzeitung in der Post-Karte (seit 25.11.2026): Schlüssel wie beim Haken der Zeitungspunkte ("wer | text"),
   // export_app.py lässt Punkte aus zeitung\ausgeblendet.txt 60 Tage weg
   function znSchluessel(x) { return String((x.wer || "") + " | " + (x.text || "")).replace(/\s+/g, " ").trim(); }
