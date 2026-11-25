@@ -1112,7 +1112,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   PA_ICON.morgen = '<svg viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></svg>';
   PA_ICON.tag = '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>';
   PA_ICON.abbestellen = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6M15.5 15.5l4 4M19.5 15.5l-4 4"/></svg>';
-  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", heute: "Heute, P1", morgen: "Morgen", tag: "Tag", abbestellen: "Abbestellen" };
+  PA_ICON.erledigt = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const PA_TEXT = { todo: "To-do", archiv: "Archiv", loeschen: "Löschen", ausblenden: "Ausblenden", erledigt: "Erledigt", heute: "Heute, P1", morgen: "Morgen", tag: "Tag", abbestellen: "Abbestellen" };
   let postMailsAktuell = [], postOffen = null, postWischBis = 0;
   const EINGANGLOKAL = "wv-eingang-lokal";
   let postEingangAktuell = [], postZnLetzt = null;
@@ -1164,7 +1165,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const lokal = postLokal(alle), mails = alle.filter(m => !lokal[m.id] && !eIds.has(m.id)); // seit 24.11. abends verschwinden alle drei Aktionen sofort
     postMailsAktuell = mails;
     // Antworten, die nur die Morgenzeitung kennt (Absender noch nicht in der Post), weiter zeigen
-    const zn = (zeitungsNeu || []).filter(x => !alle.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von)))));
+    const znWeg = lies("wv-info-weg") || {};
+    const zn = (zeitungsNeu || []).filter(x => !alle.some(m => x.wer && (klein(m.von).includes(klein(x.wer)) || klein(x.wer).includes(klein(m.von))))).filter(x => !znWeg[znSchluessel(x)]);
     const grenze = Date.now() - 24 * 3600e3, frisch = mails.filter(m => Date.parse(m.zeit) >= grenze), aelter = mails.filter(m => !(Date.parse(m.zeit) >= grenze));
     const knoepfe = () => ["todo", "archiv", "loeschen"]; // auch bei Gmail (Gregor 24.11.): nichts mehr nur ausblenden
     const zeile = m => {
@@ -1175,7 +1177,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       return '<div class="post-wisch" data-id="' + esc(m.id) + '">' + gruppe("links") +
         '<div class="eintrag todo post-zeile" data-art="' + esc(ARTEN[m.art] ? m.art : "info") + '"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (m.von ? "<b>" + esc(m.von) + "</b> · " : "") + esc(m.kurz || m.betreff || "") + '</p><p class="td-meta">' + esc(meta) + "</p></div></div></div>";
     };
-    const znZeile = x => '<div class="eintrag todo post-zeile" data-art="antwort"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta">Antwort, aus der Morgenzeitung</p></div></div>';
+    // Seit 25.11.2026 auch zum Ziehen (Gregor: bei zwei Zeilen unter Gmail gingen die Knöpfe nicht auf). Hinter diesen Antworten steht keine Mail
+    // im Posteingang, deshalb nur Erledigt: blendet sofort aus und geht wie der Haken bei den Zeitungspunkten als {a:"info"} an den Server.
+    const znZeile = x => '<div class="post-wisch" data-z="' + esc(znSchluessel(x)) + '"><div class="post-aktionen links"><button type="button" class="pa" data-was="erledigt" aria-label="' + PA_TEXT.erledigt + '">' + PA_ICON.erledigt + "<span>" + PA_TEXT.erledigt + "</span></button></div>" +
+      '<div class="eintrag todo post-zeile" data-art="antwort"><span class="td-punkt" aria-hidden="true"></span><div class="td-inhalt"><p class="td-text">' + (x.wer ? "<b>" + esc(x.wer) + "</b> · " : "") + esc(x.text) + '</p><p class="td-meta">Antwort, aus der Morgenzeitung</p></div></div></div>';
     const om = offenMerk(), fuss = [];
     if (p && p.ausgeblendet) fuss.push(p.ausgeblendet + (p.ausgeblendet === 1 ? " Newsletter oder Systemmail" : " Newsletter und Systemmails") + " beim letzten Check ausgeblendet");
     if (p && p.gmail === "nicht verbunden") fuss.push("Gmail ist nicht verbunden, bitte auf claude.ai unter Konnektoren neu anmelden");
@@ -1208,9 +1213,22 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       (aelter.length ? '<details class="mehr" data-merk="post-aelter"' + (om["post-aelter"] ? " open" : "") + "><summary>Ältere (" + aelter.length + ')</summary><div class="liste-innen">' + aelter.map(zeile).join("") + "</div></details>" : "") +
       (fuss.length ? '<p class="sp-meta">' + fuss.map(esc).join(". ") + ".</p>" : "");
     box.querySelectorAll(".td-text").forEach(x => x.onclick = () => { if (Date.now() < postWischBis) return; x.closest(".eintrag").classList.toggle("voll"); });
-    box.querySelectorAll(".post-wisch").forEach(el => wischen(el, el.dataset.e ? eingangAktion : null, true));
+    box.querySelectorAll(".post-wisch").forEach(el => wischen(el, el.dataset.e ? eingangAktion : el.dataset.z ? znAktion : null, true));
     info.textContent = ein ? (eUngelesen ? eUngelesen + " ungelesen" : eGesamt ? eGesamt + " im Eingang" : "Eingang leer") : (frisch.length + zn.length ? frisch.length + zn.length + " neu" : "");
     postStatus();
+  }
+  // Antworten aus der Morgenzeitung in der Post-Karte (seit 25.11.2026): Schlüssel wie beim Haken der Zeitungspunkte ("wer | text"),
+  // export_app.py lässt Punkte aus zeitung\ausgeblendet.txt 60 Tage weg
+  function znSchluessel(x) { return String((x.wer || "") + " | " + (x.text || "")).replace(/\s+/g, " ").trim(); }
+  function znAktion(el, was) {
+    const k = el.dataset.z; if (!k) return;
+    const w = lies("wv-info-weg") || {};
+    Object.keys(w).forEach(x => { if (Date.now() - w[x] > 60 * 864e5) delete w[x]; });
+    w[k] = Date.now(); lsSet("wv-info-weg", JSON.stringify(w));
+    const q = lies(SCHLANGE) || []; q.push({ a: "info", t: k.slice(0, 600), h: "info-" + k.length + "-" + Date.now(), ts: Date.now() }); lsSet(SCHLANGE, JSON.stringify(q));
+    sendeHaken();
+    postOffen = null; el.classList.add("weg");
+    setTimeout(() => zeichnePost(postZnLetzt), 400);
   }
   // Aktionen auf Mails aus dem Posteingang (seit 24.11.2026): verschwinden sofort, gehen verschlüsselt als {a:"eingang"} an den Server
   // (todo-sync.ps1, post\eingang-aktion.ps1: Löschen nach Gelöschte Elemente bzw. Gmail-Papierkorb, Archiv, To-do über den nächsten Check)
