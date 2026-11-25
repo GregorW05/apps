@@ -1116,6 +1116,25 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   let postMailsAktuell = [], postOffen = null, postWischBis = 0;
   const EINGANGLOKAL = "wv-eingang-lokal";
   let postEingangAktuell = [], postZnLetzt = null;
+  // Seit 25.11.2026 (Gregor: bei manchen Mails gingen die Knöpfe beim Ziehen nicht auf): Die Karte wurde mitten im Ziehen neu gezeichnet
+  // (Abgleich alle 2 Minuten, Haken, 0,4 s nach der vorigen Aktion), dabei verlor die Zeile den Finger. Neuzeichnen wartet jetzt, solange
+  // ein Finger auf einer Zeile liegt, die Karte gezogen wird oder Knöpfe offen sind (offen höchstens 15 s), und holt es danach nach.
+  let postFinger = false, postNachher = null, postNachherUhr = null;
+  function postBeschaeftigt() {
+    const k = $("post-koerper");
+    return postFinger || !!(k && k.classList.contains("zieht")) || !!(postOffen && postOffen.isConnected && Date.now() - (postOffen._aufSeit || 0) < 15000);
+  }
+  function postNachholen() {
+    clearTimeout(postNachherUhr); postNachherUhr = null;
+    if (!postNachher) return;
+    if (postBeschaeftigt()) { postNachherUhr = setTimeout(postNachholen, 600); return; }
+    const a = postNachher; postNachher = null; zeichnePost(a.zn);
+  }
+  ["pointerup", "pointercancel"].forEach(t => document.addEventListener(t, () => {
+    if (!postFinger) return;
+    postFinger = false;
+    if (postNachher) { clearTimeout(postNachherUhr); postNachherUhr = setTimeout(postNachholen, 400); }
+  }, true));
   function postLokal(alle) {
     const l = lies(POSTLOKAL) || {}, ids = alle.map(m => m.id);
     let geaendert = false;
@@ -1129,6 +1148,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   function zeichnePost(zeitungsNeu) {
     const box = $("k-post"), info = $("k-post-info"), knopf = $("k-post-jetzt");
     if (!privat) { box.innerHTML = '<p class="zeile">Gesperrt.</p>'; info.textContent = ""; $("k-post-stand").textContent = ""; knopf.hidden = true; postFortschritt(false); $("k-post-punkte").innerHTML = ""; $("post-konten").innerHTML = ""; return; }
+    if (postBeschaeftigt()) { postNachher = { zn: zeitungsNeu }; clearTimeout(postNachherUhr); postNachherUhr = setTimeout(postNachholen, 600); return; }
+    postNachher = null; clearTimeout(postNachherUhr); postNachherUhr = null;
     zeichneKonten(privat.post && privat.post.konten);
     knopf.hidden = false;
     const p = privat.post || null, alle = p && Array.isArray(p.mails) ? p.mails : [], klein = t => String(t || "").toLowerCase();
@@ -1286,6 +1307,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     let s = null;
     z.addEventListener("pointerdown", e => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (karte) postFinger = true; // Post-Karte wartet mit dem Neuzeichnen, bis der Finger weg ist (25.11.2026)
       const auf = el.classList.contains("auf"), basis = !auf ? 0 : el.dataset.seite === "l" ? bL() : -bR();
       s = { x: e.clientX, y: e.clientY, id: e.pointerId, basis, rich: null, punkte: [{ x: e.clientX, t: performance.now() }], pos: basis };
     });
@@ -1318,7 +1340,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       let ziel = 0;
       if (w.pos < 0) ziel = v < -0.3 || (v <= 0.3 && w.pos < -r * 0.4) ? -r : 0;
       else if (w.pos > 0) ziel = v > 0.3 || (v >= -0.3 && w.pos > l * 0.4) ? l : 0;
-      if (ziel) { el.dataset.seite = ziel < 0 ? "r" : "l"; el.classList.add("auf"); z.style.transform = "translate3d(" + ziel + "px,0,0)"; postOffen = el; } else wischZu(el);
+      if (ziel) { el.dataset.seite = ziel < 0 ? "r" : "l"; el.classList.add("auf"); z.style.transform = "translate3d(" + ziel + "px,0,0)"; postOffen = el; el._aufSeit = Date.now(); } else wischZu(el);
     };
     z.addEventListener("pointerup", ende); z.addEventListener("pointercancel", ende);
     // Antippen einer offenen Zeile schließt sie, statt den Text aufzuklappen
