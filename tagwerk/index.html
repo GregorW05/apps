@@ -401,6 +401,16 @@ html.laptop .mini { bottom: 14px; }
 .zt article.zu { padding-bottom: 12px; gap: 6px; }
 .zuklappen { min-height: 44px; border: 0; background: none; color: var(--muted); font: inherit; font-size: .9rem; font-weight: 600; padding: 0; cursor: pointer; }
 .zt article.liest { background: var(--zeitung-soft); box-shadow: 0 0 0 8px var(--zeitung-soft); border-radius: 2px; }
+/* Mitlesen (seit 26.11.2026): weiches Licht hinter dem gesprochenen Wort, gleitet mit der Stimme (Skript Block Mitlesen).
+   Nur transform, width und opacity ändern sich, der Text liegt darüber. */
+.zt article.liest { position: relative; }
+.zt article.liest > :not(.nebel) { position: relative; z-index: 1; }
+.nebel { position: absolute; left: 0; top: 0; z-index: 0; height: 2.1em; width: 80px; border-radius: 50%; pointer-events: none; opacity: 0;
+  --n1: color-mix(in srgb, var(--cyan) 52%, transparent); --n2: color-mix(in srgb, var(--cyan) 22%, transparent);
+  background: radial-gradient(closest-side, var(--n1), var(--n2) 58%, transparent); filter: blur(6px); will-change: transform, opacity; transition: opacity .3s ease; }
+.nebel.zieht { transition: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nebel { --n1: color-mix(in srgb, var(--cyan) 50%, transparent); --n2: color-mix(in srgb, var(--cyan) 20%, transparent); } }
+:root[data-theme="dark"] .nebel { --n1: color-mix(in srgb, var(--cyan) 50%, transparent); --n2: color-mix(in srgb, var(--cyan) 20%, transparent); }
 .karte h2 { margin: 0 -16px 4px; padding: 10px 16px; background: var(--leiste-farbe); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .karte h2 span { color: rgba(255, 255, 255, .85); font-weight: 600; letter-spacing: .02em; text-transform: none; font-size: .85rem; }
 .schlagzeilen { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 1.05rem; font-weight: 600; line-height: 1.32; }
@@ -2001,7 +2011,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (spieler.getAttribute("src")) { spieler.removeAttribute("src"); try { spieler.load(); } catch (e) {} }
     gesamtSrc = ""; sucheBei = null; letzteZeit = 0; unterbrochenUm = 0; lsSet(WIEDER, "null");
     lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: lesen.lauf + 1, g: null };
-    markiereArtikel(null); leseLeiste(); miniZeigen(false);
+    markiereArtikel(null); leseLeiste(); miniZeigen(false); nebelWeg(); wortZeitenLaden();
     if ("mediaSession" in navigator) try { navigator.mediaSession.metadata = null; } catch (e) {}
     // Während des Vorlesens kam eine neuere Fassung (etwa mit Stimme): jetzt nachladen
     if (zeitungNeu && zeitungIstHeute) { zeitungNeu = false; ladeZeitung(); }
@@ -2021,7 +2031,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     leseLeiste();
   }
   function zeigeMeldung(a) {
-    markiereArtikel(a.id); medienInfo(a);
+    markiereArtikel(a.id); medienInfo(a); wortZeitenLaden(); nebelStart();
     $("mini-titel").textContent = a.titel; $("mini-ressort").textContent = a.ressort + " · Ausgabe " + (lesen.g ? lesen.g.ausgabe : zeitung.ausgabe); $("mini-fort").style.width = "0"; $("mini-zeit").textContent = "";
   }
   function spiele(lauf) {
@@ -2319,6 +2329,100 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   });
   if (TTS) TTS.getVoices();
   leseLeiste();
+
+  // ---------- Mitlesen (seit 26.11.2026, Gregors Wunsch) ----------
+  // Ein weiches Licht (Nebel) hinter dem Wort, das die Stimme gerade spricht. Es springt nicht von Wort zu Wort, sondern gleitet:
+  // Jedes Bild wird aus der Abspielzeit die Stelle zwischen aktuellem und nächstem Wort berechnet, eine Feder glättet den Rest.
+  // Vor einem Zeilenwechsel wird es blasser und taucht auf der nächsten Zeile wieder auf. Bei Pause steht es still, in der Stille
+  // zwischen zwei Meldungen verblasst es. Die Zeiten je Wort rechnet der Server (zeitung\vorlesen\wortzeiten.py: Whisper hört die
+  // Stimme ab und gleicht sie mit dem Text ab), Datei zeitung/woerter/<Name der Gesamt-MP3>.json mit n (Wörter je Meldung) und
+  // z (Start, Ende, ... in Sekunden ab Beginn der Meldung). Wörter wie hier: Titel und Absätze, je Block an Leerraum getrennt.
+  // Nur mit der Gesamtdatei; fehlt die Datei oder passt die Wortzahl nicht, gibt es eben kein Licht.
+  const wortCache = {};
+  let mitZeiten = null, mitName = "";
+  function wortZeitenLaden() {
+    const name = lesen.an && lesen.g ? String(lesen.g.url).split("/").pop().replace(/\.mp3$/i, "") : "";
+    if (name === mitName) return;
+    mitName = name; mitZeiten = name && wortCache[name] || null;
+    if (!name || name in wortCache) return;
+    wortCache[name] = null;
+    fetch("zeitung/woerter/" + encodeURIComponent(name) + ".json").then(r => r.ok ? r.json() : null).then(j => {
+      if (j && Array.isArray(j.z) && Array.isArray(j.n)) { wortCache[name] = j; if (mitName === name) { mitZeiten = j; nebelStart(); } }
+      else setTimeout(() => { if (wortCache[name] === null) delete wortCache[name]; }, 120000); // der Server rechnet vielleicht noch
+    }).catch(() => setTimeout(() => { if (wortCache[name] === null) delete wortCache[name]; }, 120000));
+  }
+  // Wörter des Berichts einmal in Spans legen (Titel und Absätze, nicht die warum-Zeile, die liest die Stimme nicht)
+  function wortSpans(art) {
+    if (art._woerter) return art._woerter;
+    const w = [];
+    [art.querySelector(".kopfzeile")].concat([...art.querySelectorAll(".koerper > p:not(.warum)")]).forEach(el => {
+      if (!el) return;
+      el.innerHTML = el.textContent.split(/(\s+)/).map(x => !x ? "" : /^\s+$/.test(x) ? esc(x) : '<span class="w">' + esc(x) + "</span>").join("");
+      el.querySelectorAll(".w").forEach(s => w.push(s));
+    });
+    return (art._woerter = w);
+  }
+  let nebel = null, nebelArt = null, nebelRaf = 0, nebelZuletzt = 0, nb = null;
+  function nebelStart() { if (!nebelRaf) nebelRaf = requestAnimationFrame(nebelBild); }
+  function nebelWeg() {
+    if (!nebel) return;
+    const n = nebel; nebel = null; nebelArt = null; nb = null;
+    n.classList.remove("zieht"); n.style.opacity = "0"; setTimeout(() => n.remove(), 350);
+  }
+  // Index des Wortes, das zur Zeit t läuft (letztes mit Start <= t), -1 davor
+  function wortBei(z, t) {
+    let lo = 0, hi = z.length / 2 - 1, k = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (z[2 * m] <= t) { k = m; lo = m + 1; } else hi = m - 1; }
+    return k;
+  }
+  function nebelBild(ts) {
+    nebelRaf = 0;
+    const dt = nebelZuletzt ? Math.min(64, ts - nebelZuletzt) : 16; nebelZuletzt = ts;
+    const a = lesen.an && lesen.g && mitZeiten && !document.hidden && !$("v-zeitung").hidden ? lesen.liste[lesen.pos] : null;
+    const art = a && document.querySelector('#z-inhalt article[data-id="' + a.id + '"]'), z = a && mitZeiten.z[lesen.pos];
+    if (!art || !z || art.classList.contains("zu")) { nebelWeg(); nebelZuletzt = 0; return; }
+    const w = wortSpans(art), n = w.length;
+    if (!n || mitZeiten.n[lesen.pos] !== n || z.length !== 2 * n) { nebelWeg(); nebelZuletzt = 0; return; }
+    if (nebelArt !== art) {
+      if (nebel) nebel.remove();
+      nebel = document.createElement("div"); nebel.className = "nebel zieht"; nebel.setAttribute("aria-hidden", "true");
+      art.prepend(nebel); nebelArt = art; nb = null;
+    }
+    const t = (spieler.currentTime || 0) - (lesen.g.kapitel[lesen.pos] || 0), ar = art.getBoundingClientRect();
+    // Mitte etwas über der Mitte des Wortkastens, dort liegt optisch die Schrift (sonst wirkt das Licht wie eine Unterstreichung)
+    const box = s => { const r = s.getBoundingClientRect(); return { x: r.left - ar.left + r.width / 2, y: r.top - ar.top + r.height * 0.44, w: r.width, h: r.height }; };
+    // Ziel: Stelle zwischen aktuellem und nächstem Wort, anteilig nach der Zeit
+    let k = wortBei(z, t), ziel;
+    if (k < 0) { const b = box(w[0]); ziel = { x: b.x, y: b.y, w: b.w, h: b.h, o: 0 }; } // davor (etwa der Ressortname): unsichtbar am ersten Wort
+    else {
+      const b = box(w[k]), ende = z[2 * n - 1];
+      if (k >= n - 1) ziel = { x: b.x, y: b.y, w: b.w, h: b.h, o: t > ende + 0.6 ? 0 : 1 };
+      else {
+        const s0 = z[2 * k], s1 = Math.max(s0 + 0.01, z[2 * k + 2]), p = Math.max(0, Math.min(1, (t - s0) / (s1 - s0))), c = box(w[k + 1]);
+        if (Math.abs(c.y - b.y) < b.h * 0.5) ziel = { x: b.x + (c.x - b.x) * p, y: b.y, w: b.w + (c.w - b.w) * p, h: b.h, o: 1 };
+        // Zeilenwechsel voraus: noch ein Stück weiter nach rechts gleiten und blasser werden, dann auf der neuen Zeile einblenden
+        else ziel = { x: b.x + b.w * 0.35 * p, y: b.y, w: b.w, h: b.h, o: p < 0.6 ? 1 : 1 - (p - 0.6) * 1.5 };
+      }
+    }
+    // Wortgruppe statt Einzelwort: breiter als das Wort, Höhe nach der Schrift (Titel größer als Fließtext)
+    ziel.w = Math.max(70, ziel.w + 44); ziel.h = Math.max(30, ziel.h * 2.0);
+    if (!nb) nb = { x: ziel.x, y: ziel.y, w: ziel.w, h: ziel.h, o: 0 };
+    else if (Math.abs(ziel.y - nb.y) > ziel.h * 0.25) { nb.x = ziel.x; nb.y = ziel.y; nb.w = ziel.w; nb.h = ziel.h; nb.o = Math.min(nb.o, 0.1); } // neue Zeile: dort weich einblenden
+    const f = tau => 1 - Math.exp(-dt / tau);
+    const dx = ziel.x - nb.x, dw = ziel.w - nb.w, dO = ziel.o - nb.o;
+    nb.x += dx * f(110); nb.w += dw * f(140); nb.y += (ziel.y - nb.y) * f(80); nb.h += (ziel.h - nb.h) * f(140); nb.o += dO * f(160);
+    nebel.style.width = nb.w.toFixed(1) + "px"; nebel.style.height = nb.h.toFixed(1) + "px";
+    nebel.style.transform = "translate3d(" + (nb.x - nb.w / 2).toFixed(1) + "px," + (nb.y - nb.h / 2).toFixed(1) + "px,0)";
+    nebel.style.opacity = Math.max(0, Math.min(1, nb.o)).toFixed(3);
+    // Läuft die Stimme oder ist das Licht noch unterwegs, weiter; sonst ruht es (Pause)
+    if (!spieler.paused || Math.abs(dx) > 0.3 || Math.abs(dw) > 0.3 || Math.abs(dO) > 0.01) nebelRaf = requestAnimationFrame(nebelBild);
+    else nebelZuletzt = 0;
+  }
+  spieler.addEventListener("play", nebelStart);
+  spieler.addEventListener("seeked", nebelStart);
+  spieler.addEventListener("timeupdate", () => { if (!nebelRaf && !spieler.paused) nebelStart(); }); // auch nach Ansichtswechsel oder Hintergrund
+  window.addEventListener("resize", nebelStart);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) nebelStart(); });
 
   // ---------- Stand übernehmen (Lernkartei und Meal Prep) ----------
   function rahmenNeu(v) { const f = document.querySelector("#v-" + v + " iframe"); if (f && f.getAttribute("src")) try { f.contentWindow.location.reload(); } catch (e) { f.src = f.dataset.src; } }
