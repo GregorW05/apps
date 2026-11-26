@@ -407,7 +407,7 @@ html.laptop .mini { bottom: 14px; }
 .zt article.liest > :not(.nebel) { position: relative; z-index: 1; }
 .nebel { position: absolute; left: 0; top: 0; z-index: 0; height: 2.1em; width: 80px; border-radius: 50%; pointer-events: none; opacity: 0;
   --n1: color-mix(in srgb, var(--cyan) 52%, transparent); --n2: color-mix(in srgb, var(--cyan) 22%, transparent);
-  background: radial-gradient(closest-side, var(--n1), var(--n2) 58%, transparent); filter: blur(6px); will-change: transform, opacity; transition: opacity .3s ease; }
+  background: radial-gradient(closest-side, var(--n1), var(--n2) 66%, transparent); filter: blur(6px); will-change: transform, opacity; transition: opacity .3s ease; }
 .nebel.zieht { transition: none; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nebel { --n1: color-mix(in srgb, var(--cyan) 50%, transparent); --n2: color-mix(in srgb, var(--cyan) 20%, transparent); } }
 :root[data-theme="dark"] .nebel { --n1: color-mix(in srgb, var(--cyan) 50%, transparent); --n2: color-mix(in srgb, var(--cyan) 20%, transparent); }
@@ -2405,7 +2405,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       }
     }
     // Wortgruppe statt Einzelwort: breiter als das Wort, Höhe nach der Schrift (Titel größer als Fließtext)
-    ziel.w = Math.max(70, ziel.w + 44); ziel.h = Math.max(30, ziel.h * 2.0);
+    ziel.w = Math.max(150, ziel.w + 120); ziel.h = Math.max(30, ziel.h * 2.0); // seit 26.11.2026 abends breiter (Gregor: Wort und Stimme passen nicht immer ganz genau), deckt die Nachbarwörter mit ab
     if (!nb) nb = { x: ziel.x, y: ziel.y, w: ziel.w, h: ziel.h, o: 0 };
     else if (Math.abs(ziel.y - nb.y) > ziel.h * 0.25) { nb.x = ziel.x; nb.y = ziel.y; nb.w = ziel.w; nb.h = ziel.h; nb.o = Math.min(nb.o, 0.1); } // neue Zeile: dort weich einblenden
     const f = tau => 1 - Math.exp(-dt / tau);
