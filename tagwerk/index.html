@@ -1905,7 +1905,21 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const q = Math.max(0, Math.min(zug.h, p));
     mehr.style.transform = "translate3d(0," + q.toFixed(1) + "px,0)";
     hinter.style.opacity = (1 - q / zug.h).toFixed(3);
-    innen.style.transform = p < 0 ? "translate3d(0," + (-feder(-p)).toFixed(1) + "px,0)" : "";
+    // Eingeklappt nach unten ziehen (seit 26.11.2026, Gregors Wunsch): die ganze Karte folgt dem Finger und wird blasser, loslassen wischt sie weg
+    const weg = !zug.offen && p > zug.h ? p - zug.h : 0;
+    zug.weg = weg;
+    innen.style.transform = p < 0 ? "translate3d(0," + (-feder(-p)).toFixed(1) + "px,0)" : weg ? "translate3d(0," + weg.toFixed(1) + "px,0)" : "";
+    innen.style.opacity = weg ? Math.max(0.25, 1 - weg / 170).toFixed(3) : "";
+  }
+  // Weggewischt: Karte fährt nach unten raus, dann schließt der Player wie mit dem X (Vorlesen hört auf)
+  function wegwischen() {
+    innen.style.transition = "transform .2s cubic-bezier(.4, 0, 1, 1), opacity .2s linear";
+    innen.style.transform = "translate3d(0," + (innen.offsetHeight + 80) + "px,0)"; innen.style.opacity = "0";
+    setTimeout(() => {
+      stopp();
+      // Erst zurücksetzen, wenn der Player selbst unten verschwunden ist, sonst blitzt die Karte kurz auf
+      setTimeout(() => { innen.style.transition = "none"; innen.style.transform = ""; innen.style.opacity = ""; }, 340);
+    }, 200);
   }
   $("mini").addEventListener("touchstart", e => {
     if (e.touches.length !== 1) { zug = null; return; }
@@ -1940,12 +1954,15 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     // Schon ein kurzes Streichen reicht (seit 24.11.2026 abends): zu nach oben ab 30 px oder zügig nach oben, offen nach unten ab 60 px
     // oder zügig nach unten. Vorher brauchte es 25 % bzw. 30 % der Feldhöhe (rund 100 bzw. 120 px), deshalb klappte es oft erst beim zweiten Mal.
     const v = zugTempo(z), hoch = z.p0 - z.p;
-    const auf = z.offen ? !(v > 0.25 || (hoch < -60 && v > -0.15)) : (v < -0.25 || (hoch > 30 && v < 0.15));
+    // Eingeklappt: ab 50 px nach unten oder zügig nach unten verschwindet der Player
+    const raus = !z.offen && (z.weg > 50 || (z.weg > 12 && v > 0.3));
+    const auf = raus ? false : z.offen ? !(v > 0.25 || (hoch < -60 && v > -0.15)) : (v < -0.25 || (hoch > 30 && v < 0.15));
     // Klasse und Inline-Werte im selben Schritt wechseln: der Browser gleitet dann von der Fingerposition ans Ziel
     $("mini").classList.remove("zieht"); hinter.classList.remove("zieht");
     miniOffen(auf);
     mehr.style.transform = ""; hinter.style.opacity = "";
-    innen.style.transition = "transform .32s cubic-bezier(.2, .8, .2, 1)"; innen.style.transform = "";
+    if (raus) { wegwischen(); return; }
+    innen.style.transition = "transform .32s cubic-bezier(.2, .8, .2, 1), opacity .2s linear"; innen.style.transform = ""; innen.style.opacity = "";
   }
   $("mini").addEventListener("touchend", zugEnde, { passive: true });
   $("mini").addEventListener("touchcancel", zugEnde, { passive: true });
@@ -1982,7 +1999,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     anhalten();
     // Quelle leeren, damit die Anzeige auf dem Sperrbildschirm verschwindet und nichts Altes mehr startet
     if (spieler.getAttribute("src")) { spieler.removeAttribute("src"); try { spieler.load(); } catch (e) {} }
-    gesamtSrc = ""; sucheBei = null; letzteZeit = 0; lsSet(WIEDER, "null");
+    gesamtSrc = ""; sucheBei = null; letzteZeit = 0; unterbrochenUm = 0; lsSet(WIEDER, "null");
     lesen = { an: false, pause: false, liste: [], pos: 0, modus: null, lauf: lesen.lauf + 1, g: null };
     markiereArtikel(null); leseLeiste(); miniZeigen(false);
     if ("mediaSession" in navigator) try { navigator.mediaSession.metadata = null; } catch (e) {}
@@ -2018,7 +2035,12 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     // Im Hintergrund schweigt die Systemstimme am iPhone: dann lieber gleich die nächste Meldung.
     // Aktuelle Ausgabe ohne Audio: der Server rechnet die Stimme noch, also warten statt Systemstimme (seit 24.11.2026)
     const ohneAudio = () => { if (zeitungIstHeute && (!warteSeit || Date.now() - warteSeit < 10 * 60000)) warteAufStimme(a, lauf, weiter); else if (document.hidden) weiter(); else sprich(a, weiter); };
-    const ersatz = () => { if (fertig || lesen.lauf !== lauf) return; spieler.onended = spieler.onerror = null; ohneAudio(); };
+    const ersatz = () => {
+      if (fertig || lesen.lauf !== lauf) return; spieler.onended = spieler.onerror = null;
+      // Wie bei der Gesamtdatei: im Hintergrund oder ohne Netz pausieren statt alle Meldungen durchzuspringen (seit 26.11.2026)
+      if (document.hidden || navigator.onLine === false) { if (!lesen.pause) unterbrochenUm = Date.now(); lesen.pause = true; spieler.pause(); leseLeiste(); return; }
+      ohneAudio();
+    };
     if (a.audio) {
       lesen.modus = "audio";
       spieler.onended = weiter; spieler.onerror = ersatz;
@@ -2046,7 +2068,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   //    Stelle neu, statt wie früher sofort auf Einzeldateien auszuweichen (das lief im Hintergrund bis zum Stopp durch).
   // 3. Ein Ende mitten in der Datei ist ein Fehler, kein Ende: neu laden statt stoppen.
   const WIEDER = "wv-wiedergabe";
-  let letzteZeit = 0, sicherUm = 0, fehlerN = 0, fehlerUm = 0, wiederVersucht = false;
+  let letzteZeit = 0, sicherUm = 0, fehlerN = 0, fehlerUm = 0, wiederVersucht = false, unterbrochenUm = 0;
   function quelleLaden(t) {
     const g = lesen.g; if (!g) return;
     gesamtSrc = g.url; sucheBei = t > 0.5 ? t : null;
@@ -2067,6 +2089,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       fehlerUm = Date.now(); fehlerN++;
       // Erst zweimal dieselbe Datei an der gemerkten Stelle neu laden (pausiert bleibt pausiert)
       if (fehlerN <= 2) { neuLaden(lauf, !lesen.pause); return; }
+      // Im Hintergrund oder ohne Netz (etwa während eines Anrufs) nicht auf Einzeldateien ausweichen: die scheiterten dann alle nacheinander
+      // und schlossen den Player (Gregor 26.11.2026, nach einem Anruf war das Vorlesen weg). Stattdessen an der Stelle pausieren und
+      // beim Zurückkommen in die App oder sobald das Netz wieder da ist weitermachen (nachUnterbrechung).
+      if (document.hidden || navigator.onLine === false) { if (!lesen.pause) unterbrochenUm = Date.now(); lesen.pause = true; spieler.pause(); sichern(true); leseLeiste(); return; }
       // Lädt sie wirklich nicht: Einzeldateien ab der Meldung, die gerade dran ist (alter Weg)
       spieler.onended = spieler.onerror = null; gesamtSrc = ""; sucheBei = null;
       lesen.liste = lesen.liste.slice(lesen.pos); lesen.pos = 0; lesen.g = null; lesen.lauf++; spiele(lesen.lauf);
@@ -2081,20 +2107,60 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (!lesen.an || lesen.modus !== "gesamt" || !lesen.g) return;
     if (!sofort && Date.now() - sicherUm < 4000) return;
     sicherUm = Date.now();
-    lsSet(WIEDER, JSON.stringify({ ausgabe: lesen.g.ausgabe, url: lesen.g.url, kapitel: lesen.g.kapitel, dauer: lesen.g.dauer || 0, pos: lesen.pos, zeit: letzteZeit, ts: Date.now() }));
+    const a = lesen.liste[lesen.pos];
+    lsSet(WIEDER, JSON.stringify({ ausgabe: lesen.g.ausgabe, url: lesen.g.url, kapitel: lesen.g.kapitel, dauer: lesen.g.dauer || 0, pos: lesen.pos, zeit: letzteZeit, ts: Date.now(),
+      titel: a ? a.titel : "", ab: Math.max(0, letzteZeit - (lesen.g.kapitel[lesen.pos] || 0)), unterbrochen: unterbrochenUm || 0 }));
   }
   function wiederherstellen() {
     if (wiederVersucht || lesen.an || !zeitung || !zeitungIstHeute) return;
     wiederVersucht = true;
     const w = lies(WIEDER);
-    if (!w || !w.url || Date.now() - (w.ts || 0) > 12 * 3600e3 || w.ausgabe !== zeitung.ausgabe) return;
+    if (!w || !w.url || Date.now() - (w.ts || 0) > 12 * 3600e3 || w.ausgabe !== zeitung.ausgabe || !Array.isArray(w.kapitel)) return;
     const alle = artikelTexte();
-    if (!Array.isArray(w.kapitel) || w.kapitel.length !== alle.length) return;
-    lesen = { an: true, pause: true, liste: alle, pos: Math.max(0, Math.min(w.pos || 0, alle.length - 1)), modus: "gesamt", lauf: lesen.lauf + 1, g: { url: w.url, kapitel: w.kapitel.map(Number), ausgabe: w.ausgabe, dauer: Number(w.dauer) || 0 } };
-    letzteZeit = Number(w.zeit) || lesen.g.kapitel[lesen.pos] || 0;
+    if (!alle.length) return;
+    let g = { url: w.url, kapitel: w.kapitel.map(Number), ausgabe: w.ausgabe, dauer: Number(w.dauer) || 0 };
+    let pos = Math.max(0, Math.min(w.pos || 0, alle.length - 1)), zeit = Number(w.zeit) || 0;
+    // Hat die Aktualisierung inzwischen Meldungen dazugegeben oder entfernt, dieselbe Meldung über den Titel suchen und in der neuen Datei
+    // an derselben Stelle darin weitermachen (seit 26.11.2026). Früher blieb der Player dann einfach weg.
+    if (g.kapitel.length !== alle.length) {
+      const i = w.titel ? alle.findIndex(x => x.titel === w.titel) : -1, neu = gesamtAudio(alle);
+      if (i < 0 || !neu) return;
+      const ende = i + 1 < neu.kapitel.length ? neu.kapitel[i + 1] : (neu.dauer || Infinity);
+      g = neu; pos = i; zeit = Math.max(neu.kapitel[i], Math.min(neu.kapitel[i] + (Number(w.ab) || 0), ende - 2));
+    }
+    lesen = { an: true, pause: true, liste: alle, pos, modus: "gesamt", lauf: lesen.lauf + 1, g };
+    letzteZeit = zeit || g.kapitel[pos] || 0;
     gesamtHandler(lesen.lauf); quelleLaden(letzteZeit);
     miniZeigen(true); zeigeMeldung(lesen.liste[lesen.pos]); leseLeiste();
+    // Kam die Pause von einem Anruf, gleich weiterspielen. Lässt das iPhone das ohne Tippen nicht zu, steht der Player pausiert an der Stelle.
+    if (w.unterbrochen && Date.now() - w.unterbrochen < UNTERBRECHUNG_MAX) { unterbrochenUm = w.unterbrochen; nachUnterbrechung(); }
   }
+  // ---------- Anruf und andere Unterbrechungen (seit 26.11.2026, Gregors Wunsch) ----------
+  // Bei einem Anruf (auch Siri, Wecker, Sprachnachricht) hält das iPhone die Wiedergabe selbst an. Die App erkennt das daran, dass die Pause
+  // nicht über ihre eigenen Knöpfe kam (Listener "pause" weiter unten), und merkt sich den Zeitpunkt. Weiter geht es, sobald
+  // 1. das iPhone selbst wieder freigibt (WebKit spielt dann meist von sich aus weiter, der Listener "play" zieht die Knöpfe nach),
+  // 2. die Audio-Sitzung meldet, dass die Unterbrechung vorbei ist (navigator.audioSession, nur neuere iPhones),
+  // 3. Gregor nach dem Anruf in die App zurückkommt, oder das Netz nach dem Anruf wieder da ist.
+  // Jeweils 2 Sekunden zurück, damit kein Wort fehlt. Nach 30 Minuten gilt es nicht mehr, dann bleibt der Player pausiert.
+  const UNTERBRECHUNG_MAX = 30 * 60000, audioSitzung = navigator.audioSession || null;
+  function nachUnterbrechung() {
+    if (!unterbrochenUm || !lesen.an) return;
+    if (!lesen.pause || Date.now() - unterbrochenUm > UNTERBRECHUNG_MAX) { unterbrochenUm = 0; return; }
+    if (audioSitzung && audioSitzung.state === "interrupted") return; // Anruf läuft noch
+    unterbrochenUm = 0;
+    if (lesen.modus === "gesamt" && lesen.g) {
+      const z = Math.max(kapStart(), spielZeit() - 2);
+      letzteZeit = z;
+      if (spieler.readyState > 0 && !spieler.error && sucheBei === null) try { spieler.currentTime = z; } catch (e) {}
+    } else if (lesen.modus === "audio" && spieler.readyState > 0 && !spieler.error) {
+      try { spieler.currentTime = Math.max(0, spieler.currentTime - 2); } catch (e) {}
+    }
+    weiterSpielen();
+  }
+  if (audioSitzung && audioSitzung.addEventListener) audioSitzung.addEventListener("statechange", () => { if (audioSitzung.state !== "interrupted") nachUnterbrechung(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) nachUnterbrechung(); });
+  window.addEventListener("online", () => nachUnterbrechung());
+  window.addEventListener("pageshow", () => nachUnterbrechung());
   // Seit 24.11.2026: Die Zeitung erscheint ein paar Minuten vor ihrer Stimme (der Server rechnet danach). Früher sprang die App dann auf die
   // Systemstimme des iPhones (Roboterstimme, Gregor 24.11.). Jetzt alle 20 Sekunden nachsehen und mit der echten Stimme an derselben
   // Meldung beginnen. Erst nach 10 Minuten ohne Audio (Server kaputt) die Systemstimme als letzter Ausweg.
@@ -2136,8 +2202,11 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   // Früher schaltete ein Merker um; lief er auseinander (Pause im Hintergrund, abgelehntes play()), taten die Knöpfe auf dem Sperrbildschirm nichts.
   function weiterSpielen() {
     if (!lesen.an) { vorlesen(); return; }
+    unterbrochenUm = 0;
     if (istAudio()) {
       if (lesen.modus === "audio" && spieler.ended) { springe(1); return; }
+      // Einzeldatei, die im Hintergrund nicht laden konnte (siehe ersatz): dieselbe Meldung neu beginnen
+      if (lesen.modus === "audio" && (spieler.error || !spieler.currentSrc)) { lesen.pause = false; lesen.lauf++; spiele(lesen.lauf); leseLeiste(); return; }
       lesen.pause = false; leseLeiste();
       const gesamt = lesen.modus === "gesamt" && lesen.g;
       // Hat das iPhone die Datei verworfen (Fehler, keine Daten, keine Quelle), dieselbe Datei an der gemerkten Stelle neu laden
@@ -2156,8 +2225,10 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   }
   function pausieren() {
     if (!lesen.an) return;
+    unterbrochenUm = 0; // eigene Pause (Knopf, Sperrbildschirm, Kopfhörer): danach nicht von selbst weiterspielen
+    lesen.pause = true; // vor spieler.pause(), damit der Listener "pause" das nicht für einen Anruf hält
     if (istAudio()) spieler.pause(); else if (TTS) TTS.pause();
-    lesen.pause = true; leseLeiste();
+    leseLeiste();
   }
   function pauseUmschalten() { if (!lesen.an) return; if (istAudio() ? spieler.paused : lesen.pause) weiterSpielen(); else pausieren(); }
   function springe(um) {
@@ -2185,12 +2256,18 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     h("seekbackward", d => sprung(-((d && d.seekOffset) || 10)));
     h("seekforward", d => sprung((d && d.seekOffset) || 10));
     h("seekto", d => { if (istAudio() && d && typeof d.seekTime === "number") { spieler.currentTime = kapStart() + d.seekTime; position(); } });
-    h("stop", stopp);
+    // "Stopp" schicken vor allem Autoradio und Kopfhörer, oft beim Anruf: seit 26.11.2026 nur pausieren und die Stelle behalten, statt den
+    // Player zu schließen. Gilt als Unterbrechung, nach dem Anruf geht es also weiter.
+    h("stop", () => { pausieren(); unterbrochenUm = Date.now(); sichern(true); });
   }
   // Pause und Weiter über Kopfhörer oder Sperrbildschirm sollen die Knöpfe in der App mitnehmen
-  spieler.addEventListener("pause", () => { sichern(true); if (Date.now() < stillBis) return; if (lesen.an && istAudio() && !lesen.pause && !spieler.ended && spieler.src) { lesen.pause = true; leseLeiste(); } });
+  // Eine Pause, die nicht über pausieren() kam, hat das iPhone ausgelöst (Anruf, Siri, Wecker): als Unterbrechung merken (seit 26.11.2026)
+  spieler.addEventListener("pause", () => {
+    if (Date.now() >= stillBis && lesen.an && istAudio() && !lesen.pause && !spieler.ended && spieler.src) { lesen.pause = true; unterbrochenUm = Date.now(); leseLeiste(); }
+    sichern(true);
+  });
   document.addEventListener("visibilitychange", () => { if (document.hidden) sichern(true); });
-  spieler.addEventListener("play", () => { if (lesen.an && lesen.pause) { lesen.pause = false; leseLeiste(); } });
+  spieler.addEventListener("play", () => { unterbrochenUm = 0; if (lesen.an && lesen.pause) { lesen.pause = false; leseLeiste(); } });
   $("z-alle").onclick = () => vorlesen();
   function sprung(sek) {
     if (!lesen.an) return;
