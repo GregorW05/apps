@@ -342,6 +342,9 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 .mini button { background: none; border: 0; color: #fff; padding: 0; cursor: pointer; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
 .mini button svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .mini .gross { width: 46px; height: 46px; border-radius: 50%; background: #fff; color: var(--navy); }
+/* Unsichtbar größere Trefferfläche (27.11.2026): knapp daneben getippt zählt noch als Knopf, nicht als Tipp auf die Karte */
+.mini-reihe button { position: relative; }
+.mini-reihe button::before { content: ""; position: absolute; inset: -8px; border-radius: 50%; }
 .mini .gross svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
 .mini-zu { justify-self: end; width: 34px; height: 34px; }
 .mini-zu svg { width: 20px !important; height: 20px !important; }
@@ -1889,7 +1892,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   const istOffen = () => $("mini").classList.contains("offen");
   // Tippen irgendwo auf den Player (außer auf Knöpfe) klappt ihn auf und wieder zu
   let wischBis = 0;
-  $("mini-karte").addEventListener("click", e => { if (Date.now() < wischBis || e.target.closest("button")) return; miniOffen(!istOffen()); });
+  // Seit 27.11.2026 (Gregor: beim Pause-Drücken ging manchmal das Menü auf): Tippen in der Knopfzeile neben einen Knopf klappt nichts auf
+  $("mini-karte").addEventListener("click", e => { if (Date.now() < wischBis || e.target.closest("button, .mini-reihe")) return; miniOffen(!istOffen()); });
   // Schon beim Berühren außerhalb zuklappen, nicht erst beim Loslassen (Gregor 24.11.: fühlte sich verzögert an). Die Fläche fängt danach
   // noch kurz den Klick ab, der beim Loslassen kommt, damit darunter nichts ausgelöst wird.
   let fangUhr = 0;
@@ -1934,7 +1938,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   $("mini").addEventListener("touchstart", e => {
     if (e.touches.length !== 1) { zug = null; return; }
     const y = e.touches[0].clientY, h = mehr.offsetHeight || 1, offen = istOffen();
-    zug = { y0: y, punkte: [{ y, t: performance.now() }], offen, p0: offen ? 0 : h, h, p: offen ? 0 : h, aktiv: false };
+    zug = { y0: y, punkte: [{ y, t: performance.now() }], offen, p0: offen ? 0 : h, h, p: offen ? 0 : h, aktiv: false, knopf: !!e.target.closest(".mini-karte button") };
   }, { passive: true });
   // Geschwindigkeit über die letzten rund 100 ms (px/ms, negativ = nach oben). Nur der letzte Schritt war zu zufällig:
   // beim Loslassen bremst der Finger, dann galt ein schnelles Wischen als langsam (Gregor 24.11.: reagiert beim ersten Mal oft nicht)
@@ -1950,8 +1954,9 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const y = e.touches[0].clientY, dy = y - zug.y0, jetzt = performance.now();
     zug.punkte.push({ y, t: jetzt }); if (zug.punkte.length > 12) zug.punkte.shift();
     if (!zug.aktiv) {
-      if (Math.abs(dy) < 6) return;
-      zug.aktiv = true; zug.y0 += dy > 0 ? 6 : -6; // ab der Schwelle zählen, damit das Feld nicht springt
+      const schwelle = zug.knopf ? 14 : 6; // auf Pause, 10 s und X wackelt der Finger beim Tippen, das ist kein Ziehen (27.11.2026)
+      if (Math.abs(dy) < schwelle) return;
+      zug.aktiv = true; zug.y0 += dy > 0 ? schwelle : -schwelle; // ab der Schwelle zählen, damit das Feld nicht springt
       $("mini").classList.add("zieht"); hinter.classList.add("zieht");
       innen.style.transition = "none";
     }
@@ -1966,7 +1971,8 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     const v = zugTempo(z), hoch = z.p0 - z.p;
     // Eingeklappt: ab 50 px nach unten oder zügig nach unten verschwindet der Player
     const raus = !z.offen && (z.weg > 50 || (z.weg > 12 && v > 0.3));
-    const auf = raus ? false : z.offen ? !(v > 0.25 || (hoch < -60 && v > -0.15)) : (v < -0.25 || (hoch > 30 && v < 0.15));
+    // Zügig allein reicht erst ab 16 px Weg (27.11.2026), sonst galt ein kurzes Zucken beim Antippen als Wischen
+    const auf = raus ? false : z.offen ? !((v > 0.25 && hoch < -16) || (hoch < -60 && v > -0.15)) : ((v < -0.25 && hoch > 16) || (hoch > 30 && v < 0.15));
     // Klasse und Inline-Werte im selben Schritt wechseln: der Browser gleitet dann von der Fingerposition ans Ziel
     $("mini").classList.remove("zieht"); hinter.classList.remove("zieht");
     miniOffen(auf);
