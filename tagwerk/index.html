@@ -27,6 +27,7 @@
   --zeitung: var(--petrol); --zeitung-soft: #E2EEF3;
   --lernen: var(--ozean); --lernen-soft: #E3EFF6;
   --essen: var(--cyan-dunkel); --essen-soft: #E1F3FA;
+  --einkauf: var(--navy);
   --leiste: 58px; --r: 8px;
   --f-text: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
   color-scheme: light;
@@ -34,12 +35,12 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #071827; --surface: #0E2336; --surface-2: #163049; --ink: #E4EEF4; --muted: #93AABA; --line: #1E3A52;
   --brand: #E4EEF4; --focus: #4CC3F0; --hl: #4CC3F0; --rot: #F08A97; --label: #8CC3E0; --heute: #4CC3F0;
-  --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247;
+  --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247; --einkauf: #2F7FD8;
   color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #071827; --surface: #0E2336; --surface-2: #163049; --ink: #E4EEF4; --muted: #93AABA; --line: #1E3A52;
   --brand: #E4EEF4; --focus: #4CC3F0; --hl: #4CC3F0; --rot: #F08A97; --label: #8CC3E0; --heute: #4CC3F0;
-  --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247;
+  --zeitung: #5FB4D6; --zeitung-soft: #12324A; --lernen: #8CC3E0; --lernen-soft: #143049; --essen: #4CC3F0; --essen-soft: #0F3247; --einkauf: #2F7FD8;
   color-scheme: dark }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; touch-action: manipulation; /* kein Doppeltipp-Zoom, damit jeder Tipp sofort ankommt (24.11.2026) */ }
@@ -289,6 +290,22 @@ details.mehr .liste-innen { display: grid; gap: 10px; padding: 4px 0 8px; }
 #spiel, .sp { display: grid; gap: 10px; min-width: 0; }
 .sp-text { margin: 0; font-size: .97rem; }
 .sp-meta { margin: 0; color: var(--muted); font-size: .88rem; min-height: 1.2em; }
+/* Einkauf (seit 28.11.2026): eigene Liste, getrennt vom Meal Prep */
+.karte.einkauf { --akzent: var(--einkauf); --soft: var(--zeitung-soft); --leiste-farbe: var(--navy); }
+.ek-neu { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.ek-neu .knopf { min-height: 44px; }
+.ek-bereiche, .ek-akt { display: flex; flex-wrap: wrap; gap: 6px; }
+.ek-chip { min-height: 32px; padding: 0 11px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; font-size: .84rem; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ek-chip:active { transform: scale(.97); }
+.ek-chip[aria-checked="true"] { background: var(--einkauf); border-color: var(--einkauf); color: #fff; }
+.ek-chip.loeschen { color: var(--rot); }
+.ek-akt { margin-top: 8px; }
+.eintrag.todo.ek .td-text { display: block; -webkit-line-clamp: unset; }
+.ek-wagen { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.ek-wagen h3.gruppe { margin: 0; }
+.ek-mp { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#v-einkauf .karte + .karte { margin-top: 14px; }
+html.laptop #v-einkauf { max-width: 700px; }
 .sp-ok { margin: 0; font-weight: 700; color: var(--hl); }
 .sp-ziel { margin: 0; font-size: 1rem; color: var(--muted); } .sp-ziel b { font-size: 2.2rem; color: var(--ink); margin-left: 6px; font-variant-numeric: tabular-nums; }
 .brett { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; max-width: 400px; justify-self: center; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 2px var(--navy); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -473,13 +490,14 @@ textarea { min-height: 96px; font-size: .85rem; font-family: ui-monospace, Menlo
 /* Leiste unten */
 nav.leiste { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
-nav.leiste div { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); height: var(--leiste); }
+nav.leiste div { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); height: var(--leiste); }
 nav.leiste a { display: grid; justify-items: center; align-content: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: .72rem; font-weight: 600; letter-spacing: .02em; min-height: 44px; position: relative; }
 nav.leiste svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 nav.leiste a[aria-current="page"] { color: var(--ink); }
 nav.leiste a[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; background: var(--akzent); }
 nav.leiste a[data-v="heute"] { --akzent: var(--heute); } nav.leiste a[data-v="zeitung"] { --akzent: var(--zeitung); }
 nav.leiste a[data-v="lernen"] { --akzent: var(--lernen); } nav.leiste a[data-v="essen"] { --akzent: var(--essen); }
+nav.leiste a[data-v="einkauf"] { --akzent: var(--einkauf); }
 /* Laptop-Ansicht (seit 15.11.2026): automatisch ab 1000 px Breite, erzwingbar mit ?ansicht=laptop oder ?ansicht=handy.
    Leiste oben, Startseite zweispaltig, Zeitung als breitere Lesespalte */
 html.laptop .ansicht { max-width: 1180px; padding-block: calc(var(--leiste) + 28px) 48px; }
@@ -494,7 +512,7 @@ html.laptop #v-heute > .klein { grid-area: fuss; }
 html.laptop #v-zeitung { max-width: 860px; }
 html.laptop .zt article p { font-size: 1.06rem; }
 html.laptop nav.leiste { top: 0; bottom: auto; border-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 0; }
-html.laptop nav.leiste div { max-width: 1180px; padding: 0 16px; grid-template-columns: repeat(4, 150px); justify-content: start; gap: 4px; }
+html.laptop nav.leiste div { max-width: 1180px; padding: 0 16px; grid-template-columns: repeat(5, 150px); justify-content: start; gap: 4px; }
 html.laptop nav.leiste a { grid-auto-flow: column; justify-content: center; align-items: center; gap: 8px; font-size: .92rem; }
 html.laptop nav.leiste a[aria-current="page"]::before { top: auto; bottom: 0; left: 18%; right: 18%; border-radius: 3px 3px 0 0; }
 html.laptop .rahmen { top: var(--leiste); bottom: 0; }
@@ -605,6 +623,21 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
 
 <section id="v-lernen" class="rahmen" aria-label="Lernen" hidden><div class="laedt">Lernkartei lädt</div><iframe title="Lernkartei" data-src="../lernkartei/?einbetten=1"></iframe></section>
 <section id="v-essen" class="rahmen" aria-label="Essen" hidden><div class="laedt">Meal Prep lädt</div><iframe title="Meal Prep" data-src="../mealprep/?einbetten=1"></iframe></section>
+<!-- Einkauf (seit 28.11.2026): allgemeine Einkaufsliste, getrennt vom Meal Prep -->
+<main id="v-einkauf" class="ansicht" aria-labelledby="h-einkauf" hidden>
+  <header><p class="eyebrow">Wieser Ventures</p><h1 id="h-einkauf">Einkauf</h1><p class="wetter" id="ek-kurz"></p></header>
+  <section class="karte einkauf" aria-labelledby="k-einkauf">
+    <h2 id="k-einkauf">Einkaufsliste <span id="k-einkauf-info"></span></h2>
+    <form class="ek-neu" id="ek-form" autocomplete="off"><input type="text" id="ek-text" placeholder="Was brauchst du?" maxlength="80" enterkeyhint="send" aria-label="Neuer Artikel"><button class="knopf kompakt" type="submit">Dazu</button></form>
+    <div class="ek-bereiche" id="ek-bereich" role="radiogroup" aria-label="Bereich"></div>
+    <div class="liste" id="ek-liste"><p class="zeile">Lädt</p></div>
+    <p class="sp-meta" id="ek-sync"></p>
+  </section>
+  <section class="karte essen" aria-labelledby="k-ek-mp">
+    <h2 id="k-ek-mp">Meal Prep</h2>
+    <div class="ek-mp"><p class="zeile" id="ek-mp-text">Die Zutaten fürs Meal Prep stehen im Reiter Essen.</p><a class="knopf kompakt" href="#essen">Zum Meal-Prep-Einkauf</a></div>
+  </section>
+</main>
 
 <div class="leser" id="leser" role="dialog" aria-modal="true" aria-labelledby="leser-betreff" hidden>
   <div class="leser-kopf"><b id="leser-titel">Mail</b><button type="button" class="leser-zu" id="leser-zu" aria-label="Schließen">×</button></div>
@@ -632,6 +665,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   <a href="#zeitung" data-v="zeitung"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg>Zeitung</a>
   <a href="#lernen" data-v="lernen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="13" height="13" rx="2.5"/><path d="M4 16V6.5A2.5 2.5 0 0 1 6.5 4H16"/></svg>Lernen</a>
   <a href="#essen" data-v="essen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 4.5c-.8 1 .8 2 0 3M12.5 4.5c-.8 1 .8 2 0 3M16 4.5c-.8 1 .8 2 0 3"/></svg>Essen</a>
+  <a href="#einkauf" data-v="einkauf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 11.2a1.6 1.6 0 0 1-1.6 1.4H7.8a1.6 1.6 0 0 1-1.6-1.4L5 8Z"/><path d="M9 10.5V7a3 3 0 0 1 6 0v3.5"/></svg>Einkauf</a>
 </div></nav>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -664,7 +698,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
   window.addEventListener("pagehide", merkePosition);
   let posWieder = false;
   const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
-  const ANSICHTEN = ["heute", "zeitung", "lernen", "essen"];
+  const ANSICHTEN = ["heute", "zeitung", "lernen", "essen", "einkauf"];
   let zeitung = null, privat = null, geladenUm = 0, zeitungIstHeute = true;
 
   // ---------- Schlüssel über die Adresse (?k=), seit 15.11.2026 ----------
@@ -700,6 +734,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     if (v === "lernen" || v === "essen") rahmenLaden(v);
     if (v === "heute") zeichneHeute();
     if (v === "heute") window.scrollTo(0, 0);
+    if (v === "einkauf") { zeichneEinkauf(); window.scrollTo(0, 0); }
     if (v === "zeitung") window.scrollTo(0, zeitung ? leseStand(zeitung.ausgabe).y || 0 : 0);
     document.title = v === "heute" ? "Wieser Ventures" : "Wieser Ventures · " + v.charAt(0).toUpperCase() + v.slice(1);
   }
@@ -1629,10 +1664,147 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     sendetGerade = false; hakenInfo();
   }
   function hakenInfo() {
+    if ($("ek-sync")) ekSyncInfo();
     const el = $("k-todos-sync"); if (!el) return;
     const q = (lies(SCHLANGE) || []).length, n = Object.keys(hakenStand()).length;
     el.textContent = q ? q + (q === 1 ? " Haken wartet" : " Haken warten") + " auf Verbindung" : abgleichMeldung ? abgleichMeldung : n ? "Abgehakt. Der Server trägt es in etwa einer Minute ein, Ziehen zum Aktualisieren holt den neuen Stand." : "";
   }
+
+  // ---------- Einkauf (seit 28.11.2026, Gregors Wunsch: allgemeine Einkaufsliste getrennt vom Meal Prep) ----------
+  // Quelle ist einkauf\liste.json auf dem Server (privat.einkauf, verschlüsselt). Änderungen gehen wie die Haken über die Schlange
+  // ({a:"einkauf", was, id, n, b}), todo-sync.ps1 gibt sie an einkauf.py weiter. Bis der Server sie zurückmeldet, zeigt die App sie
+  // aus wv-ek-lokal (höchstens 30 min). wv-ek-letzt merkt den letzten Serverstand, damit die Liste auch offline da ist.
+  const EK_BEREICHE = ["Lebensmittel", "Drogerie", "Haushalt", "Sonstiges"];
+  // Gleiche Stichwörter wie einkauf.py: Teilwort reicht (deutsche Zusammensetzungen), kurze Wörter nur als ganzes Wort
+  const EK_STICH = {
+    Drogerie: ["toilettenpapier", "klopapier", "kondom", "waschmittel", "weichspül", "spülmittel", "spülmaschine", "geschirrtab", "raumduft", "lufterfrischer",
+      "duftkerze", "kamm", "bürste", "zahn", "shampoo", "spülung", "duschgel", "deo", "seife", "rasier", "creme", "taschentuch", "wattestäbchen", "pflaster",
+      "sonnencreme", "parfum", "haargel", "nagel", "tampon", "binde", "putzmittel", "reiniger", "entkalker"],
+    Haushalt: ["wäscheständer", "kleiderbügel", "müllsack", "müllbeutel", "schwamm", "lappen", "batterie", "glühbirne", "lampe", "kerze", "alufolie",
+      "frischhaltefolie", "backpapier", "besen", "eimer", "handtuch", "bettzeug", "kissen", "decke", "geschirr", "topf", "pfanne", "dose", "box", "kabel",
+      "stecker", "werkzeug", "schraube", "haken"],
+    Lebensmittel: ["milch", "brot", "käse", "suppenwürfel", "obst", "gemüse", "apfel", "äpfel", "banane", "nudel", "reis", "fleisch", "hendl", "huhn",
+      "hähnchen", "wurst", "schinken", "joghurt", "skyr", "butter", "kaffee", "saft", "wasser", "bier", "wein", "gewürz", "salz", "pfeffer", "zucker", "mehl",
+      "tomate", "zwiebel", "kartoffel", "schoko", "müsli", "haferflocken", "nüsse", "honig", "marmelade", "sahne", "rahm", "quark", "topfen", "fisch", "lachs", "öl"]
+  };
+  const EK_GANZ = ["ei", "eier", "tee"];
+  function ekRaten(n) {
+    const t = String(n).toLowerCase(), w = t.match(/[a-zäöüß]+/g) || [];
+    for (const b of ["Drogerie", "Haushalt", "Lebensmittel"]) if (EK_STICH[b].some(k => t.includes(k)) || (b === "Lebensmittel" && w.some(x => EK_GANZ.includes(x)))) return b;
+    return "Sonstiges";
+  }
+  let ekBereich = "Sonstiges", ekBereichFest = false, ekOffen = null;
+  const ekEcht = () => !!(privat && zeitungIstHeute && privat.einkauf && Array.isArray(privat.einkauf.artikel));
+  function ekServer() {
+    if (ekEcht()) { lsSet("wv-ek-letzt", JSON.stringify(privat.einkauf)); return privat.einkauf.artikel; }
+    const l = lies("wv-ek-letzt"); return l && Array.isArray(l.artikel) ? l.artikel : null;
+  }
+  function ekLokal() {
+    const l = lies("wv-ek-lokal") || {}, jetzt = Date.now(); let weg = false;
+    for (const id in l) if (!l[id] || jetzt - (l[id].ts || 0) > 30 * 60000) { delete l[id]; weg = true; }
+    if (weg) lsSet("wv-ek-lokal", JSON.stringify(l));
+    return l;
+  }
+  function ekListe() {
+    const srv = ekServer(), lok = ekLokal(), nachId = new Map(); let weg = false;
+    (srv || []).forEach(a => nachId.set(a.id, { id: a.id, n: a.n, b: a.b, e: !!a.e }));
+    for (const id in lok) {
+      const w = lok[id], a = nachId.get(id);
+      // Hat der Server den Wunsch übernommen, fällt die lokale Merkung weg (nur bei echtem Serverstand, nicht beim offline gemerkten)
+      const da = w.was === "neu" ? !!a : w.was === "erledigt" ? !!(a && a.e) : w.was === "offen" ? !!(a && !a.e) : w.was === "loeschen" ? !a : w.was === "bereich" ? !!(a && a.b === w.b) : true;
+      if (ekEcht() && da) { delete lok[id]; weg = true; continue; }
+      if (w.was === "neu" && !a) nachId.set(id, { id, n: w.n, b: w.b, e: false });
+      else if (a && w.was === "erledigt") a.e = true;
+      else if (a && w.was === "offen") a.e = false;
+      else if (a && w.was === "loeschen") nachId.delete(id);
+      else if (a && w.was === "bereich") a.b = w.b;
+    }
+    if (weg) lsSet("wv-ek-lokal", JSON.stringify(lok));
+    return { liste: [...nachId.values()], daten: !!srv };
+  }
+  function ekMerken(was, id, n, b) {
+    const lok = ekLokal(); lok[id] = { was, n: n || "", b: b || "", ts: Date.now() }; lsSet("wv-ek-lokal", JSON.stringify(lok));
+  }
+  function ekSenden(was, id, n, b) {
+    if (id) ekMerken(was, id, n, b);
+    const q = lies(SCHLANGE) || [];
+    q.push({ a: "einkauf", was, id: id || "", n: String(n || "").slice(0, 80), b: b || "", h: "ek-" + (id || "alle") + "-" + was, ts: Date.now() });
+    lsSet(SCHLANGE, JSON.stringify(q));
+    sendeHaken();
+  }
+  // Einmalig: was im alten Block "Sonstiges" des Meal Prep schon abgehakt war, gilt auch hier als erledigt
+  function ekUebernehmen() {
+    if (!ekEcht() || lsGet("wv-ek-migriert")) return;
+    const mp = lies(ESSEN), ch = (mp && mp.checked) || {};
+    privat.einkauf.artikel.forEach(a => { if (!a.e && ch["x-" + a.id]) ekSenden("erledigt", a.id, a.n, a.b); });
+    lsSet("wv-ek-migriert", "1");
+  }
+  function ekId(n) {
+    const slug = String(n).toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "artikel";
+    const d = new Date(), tag = d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+    return tag + "-" + slug + "-" + Math.random().toString(36).slice(2, 6);
+  }
+  function ekBereichZeichnen() {
+    $("ek-bereich").innerHTML = EK_BEREICHE.map(b => '<button type="button" class="ek-chip" role="radio" data-b="' + b + '" aria-checked="' + (b === ekBereich) + '">' + b + "</button>").join("");
+  }
+  function ekSyncInfo() {
+    const q = (lies(SCHLANGE) || []).filter(x => x.a === "einkauf").length;
+    $("ek-sync").textContent = q ? "Wartet auf Verbindung." : Object.keys(ekLokal()).length ? "Gespeichert. Der Server trägt es in etwa einer Minute ein." : "";
+  }
+  function ekMp() {
+    const z = lies("mp-einkauf-zusammenfassung"), el = $("ek-mp-text");
+    if (!z || !z.gesamt) { el.textContent = "Die Zutaten fürs Meal Prep stehen im Reiter Essen."; return; }
+    el.innerHTML = z.offen ? "<b>" + z.offen + " von " + z.gesamt + "</b> Zutaten für " + z.tage + (z.tage === 1 ? " Tag" : " Tage") + " noch offen." : "Alle Zutaten fürs Meal Prep sind im Wagen.";
+  }
+  function zeichneEinkauf() {
+    ekUebernehmen();
+    const { liste, daten } = ekListe(), offen = liste.filter(a => !a.e), wagen = liste.filter(a => a.e);
+    $("k-einkauf-info").textContent = offen.length ? offen.length + " offen" : "";
+    $("ek-kurz").textContent = offen.length ? (offen.length === 1 ? "1 Sache" : offen.length + " Sachen") + " auf der Liste" : daten ? "Alles erledigt" : "";
+    const zeile = a => '<div class="eintrag todo ek' + (a.e ? " erledigt" : "") + '" data-id="' + esc(a.id) + '"><button type="button" class="haken" aria-pressed="' + a.e + '" aria-label="' +
+      esc(a.n) + (a.e ? " wieder auf die Liste" : " in den Wagen") + '">' + (a.e ? "✓" : "") + '</button><div class="td-inhalt"><p class="td-text">' + esc(a.n) + "</p>" +
+      (ekOffen === a.id && !a.e ? '<div class="ek-akt">' + EK_BEREICHE.map(b => '<button type="button" class="ek-chip" data-akt="bereich" data-b="' + b + '" aria-checked="' + (b === a.b) + '">' + b + "</button>").join("") +
+        '<button type="button" class="ek-chip loeschen" data-akt="loeschen">Löschen</button></div>' : "") + "</div></div>";
+    let h = "";
+    if (!daten && !liste.length) h = '<p class="zeile">' + (lsGet(KEY) ? "Liste lädt." : "Die Liste kommt mit dem Schlüssel (Einstellungen auf Heute).") + "</p>";
+    else if (!offen.length) h = '<p class="zeile">Nichts auf der Liste.</p>';
+    EK_BEREICHE.forEach(b => {
+      const rs = offen.filter(a => (EK_BEREICHE.includes(a.b) ? a.b : "Sonstiges") === b).sort((x, y) => x.n.localeCompare(y.n, "de"));
+      if (rs.length) h += '<h3 class="gruppe">' + b + " <span>" + rs.length + "</span></h3>" + rs.map(zeile).join("");
+    });
+    if (wagen.length) h += '<div class="ek-wagen"><h3 class="gruppe">Im Wagen <span>' + wagen.length + '</span></h3><button type="button" class="ek-chip" id="ek-leeren">Von der Liste nehmen</button></div>' + wagen.map(zeile).join("");
+    $("ek-liste").innerHTML = h;
+    ekSyncInfo();
+    ekMp();
+  }
+  ekBereichZeichnen();
+  $("ek-text").addEventListener("input", () => { if (!ekBereichFest) { const b = ekRaten($("ek-text").value); if (b !== ekBereich) { ekBereich = b; ekBereichZeichnen(); } } });
+  $("ek-bereich").addEventListener("click", e => { const c = e.target.closest(".ek-chip"); if (!c) return; ekBereich = c.dataset.b; ekBereichFest = true; ekBereichZeichnen(); });
+  $("ek-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const n = $("ek-text").value.replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!n) return;
+    const schon = ekListe().liste.find(a => !a.e && a.n.toLowerCase() === n.toLowerCase());
+    if (!schon) ekSenden("neu", ekId(n), n, ekBereich);
+    $("ek-text").value = ""; ekBereichFest = false; ekBereich = "Sonstiges"; ekBereichZeichnen();
+    zeichneEinkauf(); $("ek-text").focus();
+  });
+  $("ek-liste").addEventListener("click", e => {
+    const zeile = e.target.closest(".eintrag.ek"), id = zeile && zeile.dataset.id;
+    if (e.target.id === "ek-leeren") {
+      const lok = ekLokal(); ekListe().liste.filter(a => a.e).forEach(a => { lok[a.id] = { was: "loeschen", ts: Date.now() }; });
+      lsSet("wv-ek-lokal", JSON.stringify(lok)); ekSenden("leeren", "", "", ""); zeichneEinkauf(); return;
+    }
+    if (!id) return;
+    const a = ekListe().liste.find(x => x.id === id); if (!a) return;
+    const k = e.target.closest(".haken"), akt = e.target.closest("[data-akt]");
+    if (k) { ekOffen = null; ekSenden(a.e ? "offen" : "erledigt", id, a.n, a.b); zeichneEinkauf(); return; }
+    if (akt && akt.dataset.akt === "loeschen") { ekOffen = null; ekSenden("loeschen", id, a.n, a.b); zeichneEinkauf(); return; }
+    if (akt && akt.dataset.akt === "bereich") { ekOffen = null; if (akt.dataset.b !== a.b) ekSenden("bereich", id, a.n, akt.dataset.b); zeichneEinkauf(); return; }
+    if (e.target.closest(".td-text") && !a.e) { ekOffen = ekOffen === id ? null : id; zeichneEinkauf(); }
+  });
+  // Meal-Prep-Stand kann sich im eingebetteten Reiter ändern (gleicher Speicher)
+  window.addEventListener("storage", e => { if (e.key === "mp-einkauf-zusammenfassung" && !$("v-einkauf").hidden) ekMp(); });
 
   // ---------- Abgleich auf Wunsch (seit 17.11.2026, Gregors Wunsch) ----------
   // Ziehen zum Aktualisieren schickt (verschlüsselt, gleiches ntfy-Thema wie die Haken) die Bitte "abgleich". todo-sync.ps1 liest dann
@@ -1696,6 +1868,7 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
     privat = null;
     await entsperren();
     zeichneZeitung(); zeichneZeitungKarte(); kalSenden(); sendeHaken();
+    if (!datei) zeichneEinkauf();
     if (lesen.an && lesen.liste[lesen.pos]) markiereArtikel(lesen.liste[lesen.pos].id); // nach dem Neuzeichnen die laufende Meldung wieder markieren
     if (!datei) wiederherstellen(); // pausierte Wiedergabe von vorher (seit 24.11.2026 abends)
     if (!datei) abgleichPruefen();
@@ -2580,11 +2753,11 @@ html.laptop .ptr { top: calc(var(--leiste) + 6px); }
       if (neu.ausgabe !== zeitung.ausgabe || kern(neu) !== kern(zeitung)) { if (!lesen.an) await ladeZeitung(); else zeitungNeu = true; return; }
       if (JSON.stringify(neu.privat) === JSON.stringify(zeitung.privat)) return;
       zeitung.privat = neu.privat; zeitung.abgeglichen = neu.abgeglichen; geladenUm = Date.now();
-      if (await entsperren() && !$("v-heute").hidden) zeichneHeute();
+      if (await entsperren()) { if (!$("v-heute").hidden) zeichneHeute(); if (!$("v-einkauf").hidden) zeichneEinkauf(); }
     } catch (e) {} finally { frischLaeuft = false; }
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - frischUm > 60000 && Date.now() - geladenUm <= 15 * 60000) frischHeute(); });
-  setInterval(() => { if (!$("v-heute").hidden || !$("v-zeitung").hidden) frischHeute(); }, 120000);
+  setInterval(() => { if (!$("v-heute").hidden || !$("v-zeitung").hidden || !$("v-einkauf").hidden) frischHeute(); }, 120000);
   zeige();
   ladeZeitung();
   // Lernen und Essen im Hintergrund vorladen, damit die Zahlen auf der Startseite frisch sind und der Wechsel sofort geht
